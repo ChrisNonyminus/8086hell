@@ -3,9 +3,9 @@
 
 #include <cstdint>
 
-uint8_t X86_IO_F100_Read8();
-void X86_IO_F100_Write8(uint8_t val);
-uint16_t X86_IO_F100_Read16();
-void X86_IO_F100_Write16(uint16_t val);
+uint8_t X86_IO_F100_Read8(void* device);
+void X86_IO_F100_Write8(void* device, uint8_t val);
+uint16_t X86_IO_F100_Read16(void* device);
+void X86_IO_F100_Write16(void* device, uint16_t val);
 
 #endif // __X86.IO_H__

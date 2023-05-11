@@ -1,5 +1,6 @@
 #include "x86.h"
 #include "x86.io.h"
+#include <assert.h>
 #include <cstdlib>
 
 X86_EMU_Machine *X86_EMU_gActiveMachine;
@@ -15,9 +16,9 @@ static int X86_IO_HandlerCmp(const void *lhs, const void *rhs) {
   X86_IO_Handler const *const l = static_cast<X86_IO_Handler const *const>(lhs);
   X86_IO_Handler const *const r = static_cast<X86_IO_Handler const *const>(rhs);
 
-  if (l->port < r->port)
+  if ((l->port_end < r->port_start) && (l->port_start < r->port_end))
     return -1;
-  else if (l->port > r->port)
+  else if ((l->port_end > r->port_start) && (l->port_start > r->port_end))
     return 1;
   else {
     return 0;
@@ -31,7 +32,7 @@ static uint8_t X86_IO_Read8(uint16_t port) {
               X86_EMU_gActiveMachine->num_io_handlers, sizeof(X86_IO_Handler),
               X86_IO_HandlerCmp));
   if (res) {
-    return res->Read8();
+    return res->Read8(NULL); // TODO: pass a real pointer!
   }
 
   printf("X86_IO_Read8: Unknown IO port %04Xh!\n", port);
@@ -45,7 +46,7 @@ static void X86_IO_Write8(uint16_t port, uint8_t val) {
               X86_EMU_gActiveMachine->num_io_handlers, sizeof(X86_IO_Handler),
               X86_IO_HandlerCmp));
   if (res) {
-    res->Write8(val);
+    res->Write8(NULL, val);
     return;
   }
 
@@ -53,13 +54,14 @@ static void X86_IO_Write8(uint16_t port, uint8_t val) {
 }
 
 static uint16_t X86_IO_Read16(uint16_t port) {
+  assert((port % 2) == 0);
   X86_IO_Handler key = {port};
   const X86_IO_Handler *res = static_cast<const X86_IO_Handler *>(
       bsearch(&key, X86_EMU_gActiveMachine->io_handlers,
               X86_EMU_gActiveMachine->num_io_handlers, sizeof(X86_IO_Handler),
               X86_IO_HandlerCmp));
   if (res) {
-    return res->Read16();
+    return res->Read16(NULL);
   }
 
   printf("X86_IO_Read8: Unknown IO port %04Xh!\n", port);
@@ -67,13 +69,14 @@ static uint16_t X86_IO_Read16(uint16_t port) {
 }
 
 static void X86_IO_Write16(uint16_t port, uint16_t val) {
+  assert((port % 2) == 0);
   X86_IO_Handler key = {port};
   const X86_IO_Handler *res = static_cast<const X86_IO_Handler *>(
       bsearch(&key, X86_EMU_gActiveMachine->io_handlers,
               X86_EMU_gActiveMachine->num_io_handlers, sizeof(X86_IO_Handler),
               X86_IO_HandlerCmp));
   if (res) {
-    res->Write16(val);
+    res->Write16(NULL, val);
     return;
   }
 
@@ -84,7 +87,7 @@ static X86_EMU_Machine *Init_80186() {
   X86_EMU_Machine *machine = new X86_EMU_Machine;
 
   static X86_IO_Handler handlers[] = {
-      {0xF100, X86_IO_F100_Read8, X86_IO_F100_Write8, X86_IO_F100_Read16,
+      {0xF100, 0xF102, X86_IO_F100_Read8, X86_IO_F100_Write8, X86_IO_F100_Read16,
        X86_IO_F100_Write16},
   };
 
