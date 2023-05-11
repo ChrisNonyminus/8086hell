@@ -285,13 +285,18 @@ BOOL X86_MOV_R16_RM16(void) {
     }
     return X86_MOV_R16_IMM16(dst, src);
   } else {
-    if (X86_CPU_MODRM_GET_MOD(modrm) == 0 &&
-        X86_CPU_MODRM_GET_REG2(modrm) == 0b110) {
-      src = X86_MEM_Read16(
-          X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word));
-      X86_CPU_gRegs.EIP.word += 2;
-      return X86_MOV_R16_IMM16(
-          dst, X86_MEM_Read16(X86_CPU_SEGOFF(X86_CPU_gRegs.DS, src)));
+    if (X86_CPU_MODRM_GET_MOD(modrm) == 0) {
+      if (X86_CPU_MODRM_GET_REG2(modrm) == 0b110) {
+        src = X86_MEM_Read16(
+            X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word));
+        X86_CPU_gRegs.EIP.word += 2;
+        return X86_MOV_R16_IMM16(
+            dst, X86_MEM_Read16(X86_CPU_SEGOFF(X86_CPU_gRegs.DS, src)));
+      } else if (X86_CPU_MODRM_GET_REG2(modrm) == 0b111) {
+        src = X86_CPU_gRegs.EAX.word;
+        X86_MEM_Write16(X86_CPU_SEGOFF(X86_CPU_gRegs.DS, X86_CPU_gRegs.EBX.word), src);
+        return TRUE;
+      }
     }
   }
   printf("UNHANDLED MODRM: %02Xh\n", (modrm));
@@ -439,6 +444,13 @@ BOOL X86_MOV_RM16_IMM16(void) {
         X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word));
     X86_CPU_gRegs.EIP.word += 2;
     X86_MEM_Write16(X86_CPU_SEGOFF(X86_CPU_gRegs.DS, offs), val);
+    return TRUE;
+  }
+  case 0xC0: {
+    uint16_t val = X86_MEM_Read16(
+        X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word));
+    X86_CPU_gRegs.EIP.word += 2;
+    X86_CPU_gRegs.EAX.word = val;
     return TRUE;
   }
   default:
