@@ -26,6 +26,12 @@ void X86_MEM_Write32(uint32_t addr, uint32_t val) {
 
 BOOL X86_NOP() { return TRUE; }
 
+BOOL X86_HLT() {
+  printf("HALT!\n");
+  printf("(for test186) 00000000h: %04X\n", X86_MEM_Read16(0));
+  return FALSE;
+}
+
 BOOL X86_JMP_REL8(void) {
   uint8_t disp =
       X86_MEM_Read8(X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word++));
@@ -299,7 +305,7 @@ BOOL X86_MOV_R8_RM8_1TO2(void) {
   return FALSE;
 }
 
-BOOL X86_MOV_R16_RM16(void) {
+BOOL X86_MOV_RM16_R16(void) {
   uint8_t modrm =
       X86_MEM_Read8(X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word++));
   uint16_t *dst;
@@ -380,6 +386,26 @@ BOOL X86_MOV_R16_RM16(void) {
       }
     }
   }
+  printf("UNHANDLED MODRM: %02Xh\n", (modrm));
+  return FALSE;
+}
+
+BOOL X86_MOV_R16_RM16(void) {
+  uint8_t modrm =
+      X86_MEM_Read8(X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word++));
+  switch (modrm) // i can't be arsed to check each bitfield right now
+  {
+  case 0x40: {
+    int8_t disp8 = X86_MEM_Read8(
+        X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word++));
+    uint16_t offs = X86_CPU_gRegs.EBX.word + X86_CPU_gRegs.ESI.word + disp8;
+    X86_CPU_gRegs.EAX.word = X86_MEM_Read16(X86_CPU_SEGOFF(X86_CPU_gRegs.DS, offs));
+    return TRUE;
+  }
+  default:
+    break;
+  }
+
   printf("UNHANDLED MODRM: %02Xh\n", (modrm));
   return FALSE;
 }
@@ -648,8 +674,9 @@ int X86_CPU_InstructionCmp(void const *lhs, void const *rhs) {
 
 X86_CPU_InstructionDef X86_CPU_gInstrMap[] = {
     {0x88, "MOV", X86_MOV_R8_RM8_1TO2, NULL, X86_OP_MODRM},
-    {0x89, "MOV", X86_MOV_R16_RM16, NULL, X86_OP_MODRM},
+    {0x89, "MOV", X86_MOV_RM16_R16, NULL, X86_OP_MODRM},
     {0x8A, "MOV", X86_MOV_R8_RM8, NULL, X86_OP_MODRM},
+    {0x8B, "MOV", X86_MOV_R16_RM16, NULL, X86_OP_MODRM},
     {0x8C, "MOV", X86_MOV_RM16_SREG, NULL, X86_OP_MODRM},
     {0x8E, "MOV", X86_MOV_SREG_RM16, NULL, X86_OP_MODRM},
     {0x90, "NOP", X86_NOP, X86_NOP, 0},
@@ -678,6 +705,7 @@ X86_CPU_InstructionDef X86_CPU_gInstrMap[] = {
     {0xEA, "JMP FAR", X86_LONGJUMP_16, NULL, X86_OP_IN_IMM},
     {0xEB, "JMP", X86_JMP_REL8, NULL, X86_OP_IN_IMM},
     {0xEF, "OUT", X86_OUT_DX_AX, NULL, 0},
+    {0xF4, "HLT", X86_HLT, NULL, 0},
     {0xFF, "JMP FAR", X86_JMP_RM16, NULL, X86_OP_MODRM},
 };
 
