@@ -22,7 +22,6 @@ typedef BOOL (*X86_CPU_InstrOp32)(uint32_t);
 
 typedef struct {
   const char *disas;
-  int num_extra_bytes;
   void *execute;
 } X86_CPU_InstructionDef;
 
