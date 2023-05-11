@@ -1,11 +1,12 @@
 #include "x86.h"
+#include <cstdlib>
 #include <stdio.h>
 #include <stdlib.h>
 
 uint8_t X86_LLE_MEM_gBios[0x10000] = {0};
 uint8_t X86_LLE_MEM_gLoMem[0x000A0000] = {0};
 
-int X86_LLE_BIOS_Load(const char *filename) {
+int X86_LLE_BIOS_Load(const char *filename, BOOL even) {
   FILE *biosFile = fopen(filename, "rb");
 
   if (!biosFile) {
@@ -16,17 +17,32 @@ int X86_LLE_BIOS_Load(const char *filename) {
   size_t fsize = ftell(biosFile);
 
   if ((fsize / 1024) != 64) {
-    printf("BIOS filesize wasn't 64KB!\n");
-    printf("Expected 64KB, got: %.2fKB\n", (float)fsize / 1024.0f);
-    return 0;
+
+    if (fsize == 32 * 1024) {
+      rewind(biosFile);
+      uint8_t* data = (uint8_t*)malloc(0x8000);
+      fread(data, 1, fsize, biosFile);
+      for (int i = even ? 0 : 1; i < 64 * 1024; i+=2) {
+        X86_LLE_MEM_gBios[i] = data[i / 2];
+      }
+      free(data);
+
+      //fread(&X86_LLE_MEM_gBios[even ? 0x8000 : 0], 1, fsize, biosFile);
+    } else {
+      printf("BIOS filesize wasn't 64KB or 32KB!\n");
+      printf("Expected 64KB or 32 KB, got: %.2fKB\n", (float)fsize / 1024.0f);
+      return 0;
+    }
+
+  } else {
+
+    rewind(biosFile);
+
+    fread(X86_LLE_MEM_gBios, 1, fsize, biosFile);
   }
 
-  rewind(biosFile);
-
-  fread(X86_LLE_MEM_gBios, 1, fsize, biosFile);
-
   X86_CPU_gRegs.EIP.word = 0; // ensure we start execution on the reset vector
-  X86_CPU_gRegs.CS = 0xFFFF; // ensure we start execution on the reset vector
+  X86_CPU_gRegs.CS = 0xFFFF;  // ensure we start execution on the reset vector
 
   return 1;
 }

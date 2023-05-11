@@ -151,7 +151,7 @@ extern uint8_t X86_LLE_MEM_gLoMem[0xA0000];
 uint8_t X86_LLE_MEM_Read8(uint32_t addr);
 void X86_LLE_MEM_Write8(uint32_t addr, uint8_t val);
 
-BOOL X86_LLE_BIOS_Load(const char *filename);
+BOOL X86_LLE_BIOS_Load(const char *filename, BOOL even);
 
 #ifdef X86_HLE
 #define X86_MEM_Read8  // TODO
