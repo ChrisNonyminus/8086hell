@@ -502,8 +502,10 @@ BOOL X86_OUT_DX_AX(void) {
 }
 
 int X86_CPU_InstructionCmp(void const *lhs, void const *rhs) {
-  X86_CPU_InstructionDef const *const l = lhs;
-  X86_CPU_InstructionDef const *const r = rhs;
+  X86_CPU_InstructionDef const *const l =
+      static_cast<X86_CPU_InstructionDef const *const>(lhs);
+  X86_CPU_InstructionDef const *const r =
+      static_cast<X86_CPU_InstructionDef const *const>(rhs);
 
   if (l->opcode < r->opcode)
     return -1;
@@ -572,41 +574,12 @@ BOOL X86_CPU_Step(void) {
 
   X86_CPU_InstructionDef key = {op};
   const X86_CPU_InstructionDef *res =
-      bsearch(&key, X86_CPU_gInstrMap,
-              sizeof(X86_CPU_gInstrMap) / sizeof(X86_CPU_gInstrMap[0]),
-              sizeof(X86_CPU_gInstrMap[0]), X86_CPU_InstructionCmp);
+      static_cast<const X86_CPU_InstructionDef *>(
+          bsearch(&key, X86_CPU_gInstrMap,
+                  sizeof(X86_CPU_gInstrMap) / sizeof(X86_CPU_gInstrMap[0]),
+                  sizeof(X86_CPU_gInstrMap[0]), X86_CPU_InstructionCmp));
 
-  // printf("\tOPCODE: %02Xh\n", op);
-
-  //   if (!X86_CPU_gInstrMap[op].execute) {
-  //     printf("ERROR: UNIMPLEMENTED OPCODE %02Xh at %08Xh\n", op,
-  //            X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word) - 1);
-  //     return FALSE;
-  //   }
   BOOL succ = FALSE;
-  /*uint32_t operand;
-  if (X86_CPU_gInstrMap[op].num_extra_bytes > 0) {
-    switch (X86_CPU_gInstrMap[op].num_extra_bytes) {
-    case 1:
-      succ = ((X86_CPU_InstrOp8)X86_CPU_gInstrMap[op].execute)(
-          X86_MEM_Read8(X86_CPU_SEGOFF(X86_CPU_gRegs.CS,
-  X86_CPU_gRegs.EIP.word++))); break; case 2: { operand =
-  X86_MEM_Read16(X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word));
-      X86_CPU_gRegs.EIP.word += 2;
-      succ = ((X86_CPU_InstrOp16)X86_CPU_gInstrMap[op].execute)(operand);
-      break;
-    }
-    case 4: {
-      operand = X86_MEM_Read32(X86_CPU_SEGOFF(X86_CPU_gRegs.CS,
-  X86_CPU_gRegs.EIP.word)); X86_CPU_gRegs.EIP.word += 4; succ =
-  ((X86_CPU_InstrOp32)X86_CPU_gInstrMap[op].execute)(operand); break;
-    }
-    default: {
-      return FALSE; // ???
-    }
-    }
-  } else*/
-  // succ = ((X86_CPU_InstrVoid)X86_CPU_gInstrMap[op].execute)();
 
   if (res) {
     succ = res->execute16();
