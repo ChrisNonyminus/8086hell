@@ -69,6 +69,11 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
+//   FILE* biosdump = fopen("biosdump.bin", "wb");
+//   if (biosdump) {
+//     fwrite(X86_LLE_MEM_gBios, 1, 64 * 1024, biosdump);
+//   }
+
   while (!quit) {
     while (SDL_PollEvent(&event)) {
       if (event.type == SDL_QUIT) {

@@ -93,6 +93,14 @@ typedef struct {
   };
 } X86_CPU_Register;
 
+#define X86_CPU_EFLAGS_CF 0x0001
+#define X86_CPU_EFLAGS_IF 0x0200
+#define X86_CPU_EFLAGS_VIF 0x00080000
+
+#define X86_CPU_SETFLAGS(flags) X86_CPU_gRegs.EFLAGS |= (flags)
+#define X86_CPU_CLEARFLAGS(flags) X86_CPU_gRegs.EFLAGS &= ~ (flags)
+#define X86_CPU_ISFLAGSET(flags) (X86_CPU_gRegs.EFLAGS & (flags))
+
 typedef struct {
   X86_CPU_Register EIP;
   X86_CPU_Register EAX;
@@ -107,6 +115,8 @@ typedef struct {
   uint16_t CS;
   uint16_t SS;
   uint16_t DS;
+
+  uint32_t EFLAGS;
 } X86_CPU_Registers;
 extern X86_CPU_Registers X86_CPU_gRegs;
 

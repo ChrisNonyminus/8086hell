@@ -4,3 +4,7 @@ bios/
 *.o
 test186/
 build/
+biosdump.bin.id0
+biosdump.bin.id1
+biosdump.bin.nam
+biosdump.bin.til

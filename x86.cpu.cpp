@@ -39,6 +39,13 @@ BOOL X86_JMP_REL8(void) {
   return TRUE;
 }
 
+BOOL X86_JMP_REL16(void) {
+  uint16_t disp =
+      X86_MEM_Read16(X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word++));
+  X86_CPU_gRegs.EIP.word = X86_CPU_gRegs.EIP.word + disp + 1;
+  return TRUE;
+}
+
 BOOL X86_MOV_R16_IMM16(uint16_t *dst, uint16_t imm) {
   *dst = imm;
   return TRUE;
@@ -657,6 +664,14 @@ BOOL X86_OUT_DX_AX(void) {
   return TRUE;
 }
 
+BOOL X86_CLI(void) {
+  X86_CPU_CLEARFLAGS(X86_CPU_EFLAGS_IF);
+
+  // TODO: VIF for protected mode?
+
+  return TRUE;
+}
+
 int X86_CPU_InstructionCmp(void const *lhs, void const *rhs) {
   X86_CPU_InstructionDef const *const l =
       static_cast<X86_CPU_InstructionDef const *const>(lhs);
@@ -702,10 +717,12 @@ X86_CPU_InstructionDef X86_CPU_gInstrMap[] = {
     X86_CPU_INSDEF_B8(DI),
     {0xC6, "MOV", X86_MOV_RM8_IMM8, NULL, X86_OP_MODRM | X86_OP_IN_IMM},
     {0xC7, "MOV", X86_MOV_RM16_IMM16, NULL, X86_OP_MODRM | X86_OP_IN_IMM},
+    {0xE9, "JMP", X86_JMP_REL16, NULL, X86_OP_IN_IMM},
     {0xEA, "JMP FAR", X86_LONGJUMP_16, NULL, X86_OP_IN_IMM},
     {0xEB, "JMP", X86_JMP_REL8, NULL, X86_OP_IN_IMM},
     {0xEF, "OUT", X86_OUT_DX_AX, NULL, 0},
     {0xF4, "HLT", X86_HLT, NULL, 0},
+    {0xFA, "CLI", X86_CLI, X86_CLI, 0},
     {0xFF, "JMP FAR", X86_JMP_RM16, NULL, X86_OP_MODRM},
 };
 
