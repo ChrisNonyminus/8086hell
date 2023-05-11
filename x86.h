@@ -35,15 +35,22 @@ typedef struct {
   uint8_t operand_types;
 } X86_CPU_InstructionDef;
 
-#define X86_CPU_INSDEF_B0(reg) {0xB0 + X86_CPU_W0REG_##reg, "MOV", X86_MOV_##reg ##_IMM8, NULL, X86_OP_IN_IMM}
-#define X86_CPU_INSDEF_B8(reg) {0xB8 + X86_CPU_REG_##reg, "MOV", X86_MOV_##reg ##_IMM16, NULL, X86_OP_IN_IMM}
+#define X86_CPU_INSDEF_B0(reg)                                                 \
+  {                                                                            \
+    0xB0 + X86_CPU_W0REG_##reg, "MOV", X86_MOV_##reg##_IMM8, NULL,             \
+        X86_OP_IN_IMM                                                          \
+  }
+#define X86_CPU_INSDEF_B8(reg)                                                 \
+  {                                                                            \
+    0xB8 + X86_CPU_REG_##reg, "MOV", X86_MOV_##reg##_IMM16, NULL,              \
+        X86_OP_IN_IMM                                                          \
+  }
 
 typedef uint8_t X86_CPU_MODRM;
 
 #define X86_CPU_MODRM_GET_MOD(modrm) ((modrm & 0b11000000) >> 6)
 #define X86_CPU_MODRM_GET_REG1(modrm) ((modrm & 0b00111000) >> 3)
 #define X86_CPU_MODRM_GET_REG2(modrm) ((modrm & 0b00000111))
-
 
 #define X86_CPU_REG_AX 0b000
 #define X86_CPU_REG_CX 0b001
@@ -102,6 +109,30 @@ typedef struct {
   uint16_t DS;
 } X86_CPU_Registers;
 extern X86_CPU_Registers X86_CPU_gRegs;
+
+typedef enum { X86_MACHINE_80186 } X86_EMU_MachineType;
+typedef struct {
+  uint16_t port;
+  uint8_t (*Read8)();
+  void (*Write8)(uint8_t val);
+  uint16_t (*Read16)();
+  void (*Write16)(uint16_t val);
+} X86_IO_Handler;
+typedef struct {
+  X86_EMU_MachineType type;
+  X86_IO_Handler *io_handlers;
+  size_t num_io_handlers;
+  void (*Deinit)(void);
+  uint8_t (*IO_Read8)(uint16_t port);
+  void (*IO_Write8)(uint16_t port, uint8_t val);
+  uint16_t (*IO_Read16)(uint16_t port);
+  void (*IO_Write16)(uint16_t port, uint16_t val);
+} X86_EMU_Machine;
+extern X86_EMU_Machine *X86_EMU_gActiveMachine;
+
+
+BOOL X86_EMU_InitMachine(X86_EMU_MachineType type);
+BOOL X86_EMU_FreeMachine(void);
 
 BOOL X86_CPU_Step(void);
 

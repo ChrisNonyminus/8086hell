@@ -55,6 +55,10 @@ int main(int argc, char *argv[]) {
     return 0;
   }
 
+  if (!X86_EMU_InitMachine(X86_MACHINE_80186)) {
+    return 1;
+  }
+
   if(!X86_LLE_BIOS_Load(argv[1])) {
     printf("Error loading BIOS!\n");
     return 1;

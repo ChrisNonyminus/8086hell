@@ -497,8 +497,8 @@ BOOL X86_MOV_RM16_SREG(void) {
 
 BOOL X86_OUT_DX_AX(void) {
   uint16_t io_port = X86_CPU_gRegs.EDX.word;
-  printf("UNIMPLEMENTED: OUT!\n");
-  return FALSE; // todo
+  X86_EMU_gActiveMachine->IO_Write16(io_port, X86_CPU_gRegs.EAX.word);
+  return TRUE;
 }
 
 int X86_CPU_InstructionCmp(void const *lhs, void const *rhs) {
@@ -545,7 +545,7 @@ X86_CPU_InstructionDef X86_CPU_gInstrMap[] = {
     {0xC7, "MOV", X86_MOV_RM16_IMM16, NULL, X86_OP_MODRM | X86_OP_IN_IMM},
     {0xEA, "JMP FAR", X86_LONGJUMP_16, NULL, X86_OP_IN_IMM},
     {0xEB, "JMP", X86_JMP_REL8, NULL, X86_OP_IN_IMM},
-    // [0xEF] = {.disas = "OUT DX, AX", .execute = X86_OUT_DX_AX},
+    {0xEF, "OUT", X86_OUT_DX_AX, NULL, 0},
     {0xFF, "JMP FAR", X86_JMP_RM16, NULL, X86_OP_MODRM},
 };
 
