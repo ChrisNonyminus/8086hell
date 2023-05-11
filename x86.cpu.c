@@ -1,4 +1,5 @@
 #include "x86.h"
+#include <stdlib.h>
 
 uint16_t X86_MEM_Read16(uint32_t addr) {
   return (X86_MEM_Read8(addr)) | (X86_MEM_Read8(addr + 1) << 8);
@@ -25,8 +26,9 @@ void X86_MEM_Write32(uint32_t addr, uint32_t val) {
 BOOL X86_NOP() { return TRUE; }
 
 BOOL X86_JMP_REL8(void) {
-  uint8_t disp = X86_MEM_Read8(X86_CPU_gRegs.CS_PLUS_IP++);
-  X86_CPU_gRegs.CS_PLUS_IP = X86_CPU_gRegs.CS_PLUS_IP + disp;
+  uint8_t disp =
+      X86_MEM_Read8(X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word++));
+  X86_CPU_gRegs.EIP.word = X86_CPU_gRegs.EIP.word + disp;
   return TRUE;
 }
 
@@ -41,44 +43,106 @@ BOOL X86_MOV_R8_IMM8(uint8_t *dst, uint8_t imm) {
 }
 
 BOOL X86_MOV_BX_IMM16(void) {
-  uint16_t imm = X86_MEM_Read16(X86_CPU_gRegs.CS_PLUS_IP);
-  X86_CPU_gRegs.CS_PLUS_IP += 2;
+  uint16_t imm =
+      X86_MEM_Read16(X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word));
+  X86_CPU_gRegs.EIP.word += 2;
   return X86_MOV_R16_IMM16(&X86_CPU_gRegs.EBX.word, imm);
 }
 BOOL X86_MOV_BP_IMM16(void) {
-  uint16_t imm = X86_MEM_Read16(X86_CPU_gRegs.CS_PLUS_IP);
-  X86_CPU_gRegs.CS_PLUS_IP += 2;
+  uint16_t imm =
+      X86_MEM_Read16(X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word));
+  X86_CPU_gRegs.EIP.word += 2;
   return X86_MOV_R16_IMM16(&X86_CPU_gRegs.EBP.word, imm);
 }
+BOOL X86_MOV_SP_IMM16(void) {
+  uint16_t imm =
+      X86_MEM_Read16(X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word));
+  X86_CPU_gRegs.EIP.word += 2;
+  return X86_MOV_R16_IMM16(&X86_CPU_gRegs.ESP.word, imm);
+}
+BOOL X86_MOV_SI_IMM16(void) {
+  uint16_t imm =
+      X86_MEM_Read16(X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word));
+  X86_CPU_gRegs.EIP.word += 2;
+  return X86_MOV_R16_IMM16(&X86_CPU_gRegs.ESI.word, imm);
+}
+BOOL X86_MOV_DI_IMM16(void) {
+  uint16_t imm =
+      X86_MEM_Read16(X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word));
+  X86_CPU_gRegs.EIP.word += 2;
+  return X86_MOV_R16_IMM16(&X86_CPU_gRegs.EDI.word, imm);
+}
 BOOL X86_MOV_AX_IMM16(void) {
-  uint16_t imm = X86_MEM_Read16(X86_CPU_gRegs.CS_PLUS_IP);
-  X86_CPU_gRegs.CS_PLUS_IP += 2;
+  uint16_t imm =
+      X86_MEM_Read16(X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word));
+  X86_CPU_gRegs.EIP.word += 2;
   return X86_MOV_R16_IMM16(&X86_CPU_gRegs.EAX.word, imm);
+}
+BOOL X86_MOV_CX_IMM16(void) {
+  uint16_t imm =
+      X86_MEM_Read16(X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word));
+  X86_CPU_gRegs.EIP.word += 2;
+  return X86_MOV_R16_IMM16(&X86_CPU_gRegs.ECX.word, imm);
 }
 
 BOOL X86_MOV_DX_IMM16(void) {
-  uint16_t imm = X86_MEM_Read16(X86_CPU_gRegs.CS_PLUS_IP);
-  X86_CPU_gRegs.CS_PLUS_IP += 2;
+  uint16_t imm =
+      X86_MEM_Read16(X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word));
+  X86_CPU_gRegs.EIP.word += 2;
   return X86_MOV_R16_IMM16(&X86_CPU_gRegs.EDX.word, imm);
 }
 
 BOOL X86_MOV_AH_IMM8(void) {
   return X86_MOV_R8_IMM8(&X86_CPU_gRegs.EAX.h,
-                         X86_MEM_Read8(X86_CPU_gRegs.CS_PLUS_IP++));
+                         X86_MEM_Read8(X86_CPU_SEGOFF(
+                             X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word++)));
 }
 
 BOOL X86_MOV_AL_IMM8(void) {
   return X86_MOV_R8_IMM8(&X86_CPU_gRegs.EAX.l,
-                         X86_MEM_Read8(X86_CPU_gRegs.CS_PLUS_IP++));
+                         X86_MEM_Read8(X86_CPU_SEGOFF(
+                             X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word++)));
+}
+
+BOOL X86_MOV_BH_IMM8(void) {
+  return X86_MOV_R8_IMM8(&X86_CPU_gRegs.EBX.h,
+                         X86_MEM_Read8(X86_CPU_SEGOFF(
+                             X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word++)));
+}
+
+BOOL X86_MOV_BL_IMM8(void) {
+  return X86_MOV_R8_IMM8(&X86_CPU_gRegs.EBX.l,
+                         X86_MEM_Read8(X86_CPU_SEGOFF(
+                             X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word++)));
+}
+
+BOOL X86_MOV_CH_IMM8(void) {
+  return X86_MOV_R8_IMM8(&X86_CPU_gRegs.ECX.h,
+                         X86_MEM_Read8(X86_CPU_SEGOFF(
+                             X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word++)));
+}
+
+BOOL X86_MOV_CL_IMM8(void) {
+  return X86_MOV_R8_IMM8(&X86_CPU_gRegs.ECX.l,
+                         X86_MEM_Read8(X86_CPU_SEGOFF(
+                             X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word++)));
 }
 
 BOOL X86_MOV_DH_IMM8(void) {
   return X86_MOV_R8_IMM8(&X86_CPU_gRegs.EDX.h,
-                         X86_MEM_Read8(X86_CPU_gRegs.CS_PLUS_IP++));
+                         X86_MEM_Read8(X86_CPU_SEGOFF(
+                             X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word++)));
+}
+
+BOOL X86_MOV_DL_IMM8(void) {
+  return X86_MOV_R8_IMM8(&X86_CPU_gRegs.EDX.l,
+                         X86_MEM_Read8(X86_CPU_SEGOFF(
+                             X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word++)));
 }
 
 BOOL X86_MOV_R8_RM8(void) {
-  uint8_t modrm = X86_MEM_Read8(X86_CPU_gRegs.CS_PLUS_IP++);
+  uint8_t modrm =
+      X86_MEM_Read8(X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word++));
   uint8_t *dst;
   uint8_t src;
   switch (X86_CPU_MODRM_GET_REG1(modrm)) {
@@ -144,8 +208,9 @@ BOOL X86_MOV_R8_RM8(void) {
   } else {
     if (X86_CPU_MODRM_GET_MOD(modrm) == 0 &&
         X86_CPU_MODRM_GET_REG2(modrm) == 0b110) {
-      uint16_t offs = X86_MEM_Read16(X86_CPU_gRegs.CS_PLUS_IP);
-      X86_CPU_gRegs.CS_PLUS_IP += 2;
+      uint16_t offs = X86_MEM_Read16(
+          X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word));
+      X86_CPU_gRegs.EIP.word += 2;
       return X86_MOV_R8_IMM8(
           dst, X86_MEM_Read8(X86_CPU_SEGOFF(X86_CPU_gRegs.DS, offs)));
     }
@@ -155,7 +220,8 @@ BOOL X86_MOV_R8_RM8(void) {
 }
 
 BOOL X86_MOV_R16_RM16(void) {
-  uint8_t modrm = X86_MEM_Read8(X86_CPU_gRegs.CS_PLUS_IP++);
+  uint8_t modrm =
+      X86_MEM_Read8(X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word++));
   uint16_t *dst;
   uint16_t src;
   switch (X86_CPU_MODRM_GET_REG2(modrm)) {
@@ -221,8 +287,9 @@ BOOL X86_MOV_R16_RM16(void) {
   } else {
     if (X86_CPU_MODRM_GET_MOD(modrm) == 0 &&
         X86_CPU_MODRM_GET_REG2(modrm) == 0b110) {
-      src = X86_MEM_Read16(X86_CPU_gRegs.CS_PLUS_IP);
-      X86_CPU_gRegs.CS_PLUS_IP += 2;
+      src = X86_MEM_Read16(
+          X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word));
+      X86_CPU_gRegs.EIP.word += 2;
       return X86_MOV_R16_IMM16(
           dst, X86_MEM_Read16(X86_CPU_SEGOFF(X86_CPU_gRegs.DS, src)));
     }
@@ -233,7 +300,8 @@ BOOL X86_MOV_R16_RM16(void) {
 
 // FIXME
 BOOL X86_MOV_SREG_RM16(void) {
-  uint8_t modrm = X86_MEM_Read8(X86_CPU_gRegs.CS_PLUS_IP++);
+  uint8_t modrm =
+      X86_MEM_Read8(X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word++));
   uint16_t *dst;
   uint16_t src;
   switch (X86_CPU_MODRM_GET_REG1(modrm)) {
@@ -287,8 +355,9 @@ BOOL X86_MOV_SREG_RM16(void) {
   } else {
     if (X86_CPU_MODRM_GET_MOD(modrm) == 0 &&
         X86_CPU_MODRM_GET_REG2(modrm) == 0b110) {
-      src = X86_MEM_Read16(X86_CPU_gRegs.CS_PLUS_IP);
-      X86_CPU_gRegs.CS_PLUS_IP += 2;
+      src = X86_MEM_Read16(
+          X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word));
+      X86_CPU_gRegs.EIP.word += 2;
       return X86_MOV_R16_IMM16(
           dst, X86_MEM_Read16(X86_CPU_SEGOFF(X86_CPU_gRegs.DS, src)));
     }
@@ -298,36 +367,34 @@ BOOL X86_MOV_SREG_RM16(void) {
 }
 
 BOOL X86_MOV_AX_MOFFS16(void) {
-  uint16_t offset = X86_MEM_Read16(X86_CPU_gRegs.CS_PLUS_IP);
-  X86_CPU_gRegs.CS_PLUS_IP += 2;
+  uint16_t offset =
+      X86_MEM_Read16(X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word));
+  X86_CPU_gRegs.EIP.word += 2;
   return X86_MOV_R16_IMM16(
       &X86_CPU_gRegs.EAX.word,
       X86_MEM_Read16(X86_CPU_SEGOFF(X86_CPU_gRegs.DS, offset)));
 }
 
 BOOL X86_JMP_RM16(void) {
-  uint8_t modrm = X86_MEM_Read8(X86_CPU_gRegs.CS_PLUS_IP++);
+  uint8_t modrm =
+      X86_MEM_Read8(X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word++));
   if (X86_CPU_MODRM_GET_MOD(modrm) == 0b11 &&
       X86_CPU_MODRM_GET_REG1(modrm) == 0b100) {
     switch (X86_CPU_MODRM_GET_REG2(modrm)) {
     case X86_CPU_REG_AX: { // jmp ax
-      X86_CPU_gRegs.CS_PLUS_IP =
-          X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EAX.word);
+      X86_CPU_gRegs.EIP.word = X86_CPU_gRegs.EAX.word;
       return TRUE;
     } break;
     case X86_CPU_REG_CX: { // jmp cx
-      X86_CPU_gRegs.CS_PLUS_IP =
-          X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.ECX.word);
+      X86_CPU_gRegs.EIP.word = X86_CPU_gRegs.ECX.word;
       return TRUE;
     } break;
     case X86_CPU_REG_BX: { // jmp bx
-      X86_CPU_gRegs.CS_PLUS_IP =
-          X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EBX.word);
+      X86_CPU_gRegs.EIP.word = X86_CPU_gRegs.EBX.word;
       return TRUE;
     } break;
     case X86_CPU_REG_DX: { // jmp cx
-      X86_CPU_gRegs.CS_PLUS_IP =
-          X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EDX.word);
+      X86_CPU_gRegs.EIP.word = X86_CPU_gRegs.EDX.word;
       return TRUE;
     } break;
     default:
@@ -336,11 +403,11 @@ BOOL X86_JMP_RM16(void) {
   }
   if (X86_CPU_MODRM_GET_MOD(modrm) == 0b01 &&
       X86_CPU_MODRM_GET_REG2(modrm) == 0b011) {
-    int8_t disp8 = X86_MEM_Read8(X86_CPU_gRegs.CS_PLUS_IP++);
+    int8_t disp8 = X86_MEM_Read8(
+        X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word++));
     uint16_t offs = X86_CPU_gRegs.EBP.word + X86_CPU_gRegs.EDI.word + disp8;
-    X86_CPU_gRegs.CS_PLUS_IP =
-        X86_CPU_SEGOFF(X86_CPU_gRegs.CS,
-                       X86_MEM_Read16(X86_CPU_SEGOFF(X86_CPU_gRegs.SS, offs)));
+    X86_CPU_gRegs.EIP.word =
+        X86_MEM_Read16(X86_CPU_SEGOFF(X86_CPU_gRegs.SS, offs));
     return TRUE;
   }
   printf("Unknown modrm for X86_JMP_RM16: %02Xh!\n", modrm);
@@ -348,24 +415,29 @@ BOOL X86_JMP_RM16(void) {
 }
 
 BOOL X86_LONGJUMP_16(void) {
-  uint16_t target_ip = X86_MEM_Read16(X86_CPU_gRegs.CS_PLUS_IP);
-  X86_CPU_gRegs.CS_PLUS_IP += 2;
-  uint16_t target_cs = X86_MEM_Read16(X86_CPU_gRegs.CS_PLUS_IP);
-  X86_CPU_gRegs.CS_PLUS_IP += 2;
+  uint16_t target_ip =
+      X86_MEM_Read16(X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word));
+  X86_CPU_gRegs.EIP.word += 2;
+  uint16_t target_cs =
+      X86_MEM_Read16(X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word));
+  X86_CPU_gRegs.EIP.word += 2;
   X86_CPU_gRegs.CS = target_cs;
 
-  X86_CPU_gRegs.CS_PLUS_IP = X86_CPU_SEGOFF(target_cs, target_ip);
+  X86_CPU_gRegs.EIP.word = target_ip;
   return TRUE;
 }
 
 BOOL X86_MOV_RM16_IMM16(void) {
-  uint8_t modrm = X86_MEM_Read8(X86_CPU_gRegs.CS_PLUS_IP++);
+  uint8_t modrm =
+      X86_MEM_Read8(X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word++));
   switch (modrm) {
   case 6: {
-    uint16_t offs = X86_MEM_Read16(X86_CPU_gRegs.CS_PLUS_IP);
-    X86_CPU_gRegs.CS_PLUS_IP += 2;
-    uint16_t val = X86_MEM_Read16(X86_CPU_gRegs.CS_PLUS_IP);
-    X86_CPU_gRegs.CS_PLUS_IP += 2;
+    uint16_t offs = X86_MEM_Read16(
+        X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word));
+    X86_CPU_gRegs.EIP.word += 2;
+    uint16_t val = X86_MEM_Read16(
+        X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word));
+    X86_CPU_gRegs.EIP.word += 2;
     X86_MEM_Write16(X86_CPU_SEGOFF(X86_CPU_gRegs.DS, offs), val);
     return TRUE;
   }
@@ -377,15 +449,17 @@ BOOL X86_MOV_RM16_IMM16(void) {
 }
 
 BOOL X86_MOV_MOFFS16_AX(void) {
-  uint16_t offs = X86_MEM_Read16(X86_CPU_gRegs.CS_PLUS_IP);
-  X86_CPU_gRegs.CS_PLUS_IP += 2;
+  uint16_t offs =
+      X86_MEM_Read16(X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word));
+  X86_CPU_gRegs.EIP.word += 2;
   X86_MEM_Write16(X86_CPU_SEGOFF(X86_CPU_gRegs.DS, offs),
                   X86_CPU_gRegs.EAX.word);
   return TRUE;
 }
 
 BOOL X86_MOV_RM16_SREG(void) {
-  uint8_t modrm = X86_MEM_Read8(X86_CPU_gRegs.CS_PLUS_IP++);
+  uint8_t modrm =
+      X86_MEM_Read8(X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word++));
   uint16_t dst;
   uint16_t src;
   switch (X86_CPU_MODRM_GET_REG1(modrm)) {
@@ -410,8 +484,9 @@ BOOL X86_MOV_RM16_SREG(void) {
   } else {
     if (X86_CPU_MODRM_GET_MOD(modrm) == 0 &&
         X86_CPU_MODRM_GET_REG2(modrm) == 0b110) {
-      dst = X86_MEM_Read16(X86_CPU_gRegs.CS_PLUS_IP);
-      X86_CPU_gRegs.CS_PLUS_IP += 2;
+      dst = X86_MEM_Read16(
+          X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word));
+      X86_CPU_gRegs.EIP.word += 2;
       X86_MEM_Write16(X86_CPU_SEGOFF(X86_CPU_gRegs.DS, dst), src);
       return TRUE;
     }
@@ -426,48 +501,55 @@ BOOL X86_OUT_DX_AX(void) {
   return FALSE; // todo
 }
 
+int X86_CPU_InstructionCmp(void const *lhs, void const *rhs) {
+  X86_CPU_InstructionDef const *const l = lhs;
+  X86_CPU_InstructionDef const *const r = rhs;
+
+  if (l->opcode < r->opcode)
+    return -1;
+  else if (l->opcode > r->opcode)
+    return 1;
+  else {
+    return 0;
+  }
+}
+
 X86_CPU_InstructionDef X86_CPU_gInstrMap[] = {
-    [0x90] = {.disas = "NOP", .execute = X86_NOP},
-    [0xEB] = {.disas = "JMP 0x%02X",
+    {0x89, "MOV", X86_MOV_R16_RM16, NULL, X86_OP_MODRM},
+    {0x8A, "MOV", X86_MOV_R8_RM8, NULL, X86_OP_MODRM},
+    {0x8C, "MOV", X86_MOV_RM16_SREG, NULL, X86_OP_MODRM},
+    {0x8E, "MOV", X86_MOV_SREG_RM16, NULL, X86_OP_MODRM},
+    {0x90, "NOP", X86_NOP, X86_NOP, 0},
 
-              .execute = X86_JMP_REL8},
-    [0xB0] = {.disas = "MOV AL, 0x%02X",
+    {0xA1, "MOV", X86_MOV_AX_MOFFS16, NULL, X86_OP_IN_MEM | X86_OP_OUT_REG},
+    {0xA3, "MOV", X86_MOV_MOFFS16_AX, NULL, X86_OP_OUT_MEM | X86_OP_IN_REG},
+    X86_CPU_INSDEF_B0(AL),
+    X86_CPU_INSDEF_B0(CL),
+    X86_CPU_INSDEF_B0(DL),
+    X86_CPU_INSDEF_B0(BL),
+    X86_CPU_INSDEF_B0(AH),
+    X86_CPU_INSDEF_B0(CH),
+    X86_CPU_INSDEF_B0(DH),
+    X86_CPU_INSDEF_B0(BH),
 
-              .execute = X86_MOV_AL_IMM8},
-    [0xB4] = {.disas = "MOV AH, 0x%02X",
-
-              .execute = X86_MOV_AH_IMM8},
-    [0xB6] = {.disas = "MOV DH, 0x%02X",
-
-              .execute = X86_MOV_DH_IMM8},
-    [0xB8] = {.disas = "MOV AX, 0x%04X",
-
-              .execute = X86_MOV_AX_IMM16},
-    [0xBA] = {.disas = "MOV DX, 0x%04X",
-
-              .execute = X86_MOV_DX_IMM16},
-    [0xBB] = {.disas = "MOV BX, 0x%04X",
-
-              .execute = X86_MOV_BX_IMM16},
-    [0xBD] = {.disas = "MOV BP, 0x%04X",
-
-              .execute = X86_MOV_BP_IMM16},
-    [0x89] = {.disas = "MOV %s, %s", .execute = X86_MOV_R16_RM16},
-    [0x8A] = {.disas = "MOV %s, %s", .execute = X86_MOV_R8_RM8},
-    [0x8C] = {.disas = "MOV %s, %s", .execute = X86_MOV_RM16_SREG},
-    [0x8E] = {.disas = "MOV %s, %s",
-
-              .execute = X86_MOV_SREG_RM16},
-    [0xA1] = {.disas = "MOV AX, 0x%04X", .execute = X86_MOV_AX_MOFFS16},
-    [0xA3] = {.disas = "MOV [0x%04X], AX", .execute = X86_MOV_MOFFS16_AX},
-    [0xC7] = {.disas = "MOV %s, %s", .execute = X86_MOV_RM16_IMM16},
-    [0xEA] = {.disas = "JMP FAR %s:%s", .execute = X86_LONGJUMP_16},
-    [0xEF] = {.disas = "OUT DX, AX", .execute = X86_OUT_DX_AX},
-    [0xFF] = {.disas = "JMP FAR %s", .execute = X86_JMP_RM16},
+    X86_CPU_INSDEF_B8(AX),
+    X86_CPU_INSDEF_B8(CX),
+    X86_CPU_INSDEF_B8(DX),
+    X86_CPU_INSDEF_B8(BX),
+    X86_CPU_INSDEF_B8(SP),
+    X86_CPU_INSDEF_B8(BP),
+    X86_CPU_INSDEF_B8(SI),
+    X86_CPU_INSDEF_B8(DI),
+    {0xC7, "MOV", X86_MOV_RM16_IMM16, NULL, X86_OP_MODRM | X86_OP_IN_IMM},
+    {0xEA, "JMP FAR", X86_LONGJUMP_16, NULL, X86_OP_IN_IMM},
+    {0xEB, "JMP", X86_JMP_REL8, NULL, X86_OP_IN_IMM},
+    // [0xEF] = {.disas = "OUT DX, AX", .execute = X86_OUT_DX_AX},
+    {0xFF, "JMP FAR", X86_JMP_RM16, NULL, X86_OP_MODRM},
 };
 
 void X86_CPU_PrintRegisters() {
-  printf("\tPC: %08Xh\n", X86_CPU_gRegs.CS_PLUS_IP);
+  printf("\tPC: %08Xh\n",
+         X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word));
   printf("\tEAX: %08Xh\n", X86_CPU_gRegs.EAX.dword);
   printf("\tEBX: %08Xh\n", X86_CPU_gRegs.EBX.dword);
   printf("\tECX: %08Xh\n", X86_CPU_gRegs.ECX.dword);
@@ -484,41 +566,54 @@ BOOL X86_CPU_Step(void) {
   printf("CPU STEP!\n");
   X86_CPU_PrintRegisters();
 
-  uint8_t op = X86_MEM_Read8(X86_CPU_gRegs.CS_PLUS_IP++);
+  uint8_t op =
+      X86_MEM_Read8(X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word++));
   printf("\topcode: %02Xh\n", op);
+
+  X86_CPU_InstructionDef key = {op};
+  const X86_CPU_InstructionDef *res =
+      bsearch(&key, X86_CPU_gInstrMap,
+              sizeof(X86_CPU_gInstrMap) / sizeof(X86_CPU_gInstrMap[0]),
+              sizeof(X86_CPU_gInstrMap[0]), X86_CPU_InstructionCmp);
 
   // printf("\tOPCODE: %02Xh\n", op);
 
-  if (!X86_CPU_gInstrMap[op].execute) {
-    printf("ERROR: UNIMPLEMENTED OPCODE %02Xh at %08Xh\n", op,
-           X86_CPU_gRegs.CS_PLUS_IP - 1);
-    return FALSE;
-  }
-  BOOL succ = TRUE;
+  //   if (!X86_CPU_gInstrMap[op].execute) {
+  //     printf("ERROR: UNIMPLEMENTED OPCODE %02Xh at %08Xh\n", op,
+  //            X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word) - 1);
+  //     return FALSE;
+  //   }
+  BOOL succ = FALSE;
   /*uint32_t operand;
   if (X86_CPU_gInstrMap[op].num_extra_bytes > 0) {
     switch (X86_CPU_gInstrMap[op].num_extra_bytes) {
     case 1:
       succ = ((X86_CPU_InstrOp8)X86_CPU_gInstrMap[op].execute)(
-          X86_MEM_Read8(X86_CPU_gRegs.CS_PLUS_IP++));
-      break;
-    case 2: {
-      operand = X86_MEM_Read16(X86_CPU_gRegs.CS_PLUS_IP);
-      X86_CPU_gRegs.CS_PLUS_IP += 2;
+          X86_MEM_Read8(X86_CPU_SEGOFF(X86_CPU_gRegs.CS,
+  X86_CPU_gRegs.EIP.word++))); break; case 2: { operand =
+  X86_MEM_Read16(X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word));
+      X86_CPU_gRegs.EIP.word += 2;
       succ = ((X86_CPU_InstrOp16)X86_CPU_gInstrMap[op].execute)(operand);
       break;
     }
     case 4: {
-      operand = X86_MEM_Read32(X86_CPU_gRegs.CS_PLUS_IP);
-      X86_CPU_gRegs.CS_PLUS_IP += 4;
-      succ = ((X86_CPU_InstrOp32)X86_CPU_gInstrMap[op].execute)(operand);
-      break;
+      operand = X86_MEM_Read32(X86_CPU_SEGOFF(X86_CPU_gRegs.CS,
+  X86_CPU_gRegs.EIP.word)); X86_CPU_gRegs.EIP.word += 4; succ =
+  ((X86_CPU_InstrOp32)X86_CPU_gInstrMap[op].execute)(operand); break;
     }
     default: {
       return FALSE; // ???
     }
     }
   } else*/
-  succ = ((X86_CPU_InstrVoid)X86_CPU_gInstrMap[op].execute)();
+  // succ = ((X86_CPU_InstrVoid)X86_CPU_gInstrMap[op].execute)();
+
+  if (res) {
+    succ = res->execute16();
+  } else {
+    printf("ERROR: UNIMPLEMENTED OPCODE %02Xh at %08Xh\n", op,
+           X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word) - 1);
+  }
+
   return succ;
 }

@@ -11,25 +11,39 @@ extern "C" {
 #include <stdint.h>
 #include <stdio.h>
 
-#define BOOL int
+typedef int BOOL;
 #define TRUE 1
 #define FALSE 0
 
-typedef BOOL (*X86_CPU_InstrVoid)(void);
-typedef BOOL (*X86_CPU_InstrOp8)(uint8_t);
-typedef BOOL (*X86_CPU_InstrOp16)(uint16_t);
-typedef BOOL (*X86_CPU_InstrOp32)(uint32_t);
+typedef BOOL (*X86_CPU_InstrFunc)(void);
+
+typedef enum {
+  X86_OP_IN_REG = (1 << 1),
+  X86_OP_IN_MEM = (1 << 2),
+  X86_OP_OUT_REG = (1 << 3),
+  X86_OP_OUT_MEM = (1 << 4),
+  X86_OP_IN_IMM = (1 << 5),
+  X86_OP_MODRM = (1 << 6),
+  // X86_OP_REG = (1 << 7),
+} X86_CPU_OPERAND_TYPE;
 
 typedef struct {
-  const char *disas;
-  void *execute;
+  uint8_t opcode;
+  const char *name;
+  X86_CPU_InstrFunc execute16;
+  X86_CPU_InstrFunc execute32;
+  uint8_t operand_types;
 } X86_CPU_InstructionDef;
+
+#define X86_CPU_INSDEF_B0(reg) {0xB0 + X86_CPU_W0REG_##reg, "MOV", X86_MOV_##reg ##_IMM8, NULL, X86_OP_IN_IMM}
+#define X86_CPU_INSDEF_B8(reg) {0xB8 + X86_CPU_REG_##reg, "MOV", X86_MOV_##reg ##_IMM16, NULL, X86_OP_IN_IMM}
 
 typedef uint8_t X86_CPU_MODRM;
 
 #define X86_CPU_MODRM_GET_MOD(modrm) ((modrm & 0b11000000) >> 6)
 #define X86_CPU_MODRM_GET_REG1(modrm) ((modrm & 0b00111000) >> 3)
 #define X86_CPU_MODRM_GET_REG2(modrm) ((modrm & 0b00000111))
+
 
 #define X86_CPU_REG_AX 0b000
 #define X86_CPU_REG_CX 0b001
@@ -73,7 +87,7 @@ typedef struct {
 } X86_CPU_Register;
 
 typedef struct {
-  uint32_t CS_PLUS_IP;
+  X86_CPU_Register EIP;
   X86_CPU_Register EAX;
   X86_CPU_Register EBX;
   X86_CPU_Register ECX;
