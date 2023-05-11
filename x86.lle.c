@@ -26,6 +26,7 @@ int X86_LLE_BIOS_Load(const char *filename) {
   fread(X86_LLE_MEM_gBios, 1, fsize, biosFile);
 
   X86_CPU_gRegs.CS_PLUS_IP = 0xF0000; // ensure we start execution on the bios
+  X86_CPU_gRegs.CS = 0xF000; // ensure we start execution on the bios
 
   return 1;
 }

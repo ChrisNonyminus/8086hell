@@ -29,8 +29,8 @@ typedef struct {
 typedef uint8_t X86_CPU_MODRM;
 
 #define X86_CPU_MODRM_GET_MOD(modrm) ((modrm & 0b11000000) >> 6)
-#define X86_CPU_MODRM_GET_REG(modrm) ((modrm & 0b00111000) >> 3)
-#define X86_CPU_MODRM_GET_R_M(modrm) ((modrm & 0b00000111))
+#define X86_CPU_MODRM_GET_REG1(modrm) ((modrm & 0b00111000) >> 3)
+#define X86_CPU_MODRM_GET_REG2(modrm) ((modrm & 0b00000111))
 
 #define X86_CPU_REG_AX 0b000
 #define X86_CPU_REG_CX 0b001
@@ -41,6 +41,15 @@ typedef uint8_t X86_CPU_MODRM;
 #define X86_CPU_REG_SI 0b110
 #define X86_CPU_REG_DI 0b111
 
+#define X86_CPU_W0REG_AL 0b000
+#define X86_CPU_W0REG_CL 0b001
+#define X86_CPU_W0REG_DL 0b010
+#define X86_CPU_W0REG_BL 0b011
+#define X86_CPU_W0REG_AH 0b100
+#define X86_CPU_W0REG_CH 0b101
+#define X86_CPU_W0REG_DH 0b110
+#define X86_CPU_W0REG_BH 0b111
+
 #define X86_CPU_SREG_ES 0b00
 #define X86_CPU_SREG_CS 0b01
 #define X86_CPU_SREG_SS 0b10
@@ -49,19 +58,35 @@ typedef uint8_t X86_CPU_MODRM;
 extern X86_CPU_InstructionDef X86_CPU_gInstrMap[];
 
 typedef struct {
+  union {
+    uint32_t dword;
+    struct {
+      union {
+        uint16_t word;
+        struct {
+          uint8_t l;
+          uint8_t h;
+        };
+      };
+      uint16_t hiword;
+    };
+  };
+} X86_CPU_Register;
+
+typedef struct {
   uint32_t CS_PLUS_IP;
-  union {
-    uint32_t EBX;
-    uint16_t BX;
-  };
-  union {
-    uint32_t EAX;
-    uint16_t AX;
-  };
-  uint16_t AH;
-  uint16_t AL;
-  uint16_t DS;
+  X86_CPU_Register EAX;
+  X86_CPU_Register EBX;
+  X86_CPU_Register ECX;
+  X86_CPU_Register EDX;
+  X86_CPU_Register ESP;
+  X86_CPU_Register EBP;
+  X86_CPU_Register ESI;
+  X86_CPU_Register EDI;
+  uint16_t ES;
   uint16_t CS;
+  uint16_t SS;
+  uint16_t DS;
 } X86_CPU_Registers;
 extern X86_CPU_Registers X86_CPU_gRegs;
 
@@ -75,7 +100,7 @@ X86 System Memory Map (according to OSdev wiki):
 F0000-FFFFF: 64KiB motherboard BIOS
 */
 extern uint8_t X86_LLE_MEM_gBios[0x10000];
-extern uint8_t X86_LLE_MEM_gLoMem[0x000A0000];
+extern uint8_t X86_LLE_MEM_gLoMem[0xA0000];
 
 uint8_t X86_LLE_MEM_Read8(uint32_t addr);
 void X86_LLE_MEM_Write8(uint32_t addr, uint8_t val);
