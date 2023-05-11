@@ -421,8 +421,9 @@ BOOL X86_MOV_RM16_SREG(void) {
 }
 
 BOOL X86_OUT_DX_AX(void) {
-    uint16_t io_port = X86_CPU_gRegs.EDX.word;
-    return FALSE; // todo
+  uint16_t io_port = X86_CPU_gRegs.EDX.word;
+  printf("UNIMPLEMENTED: OUT!\n");
+  return FALSE; // todo
 }
 
 X86_CPU_InstructionDef X86_CPU_gInstrMap[] = {
