@@ -1,4 +1,6 @@
 *.bin
+*.BIN
+bios/
 *.o
 test186/
 build/

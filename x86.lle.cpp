@@ -25,8 +25,8 @@ int X86_LLE_BIOS_Load(const char *filename) {
 
   fread(X86_LLE_MEM_gBios, 1, fsize, biosFile);
 
-  X86_CPU_gRegs.EIP.word = 0; // ensure we start execution on the bios
-  X86_CPU_gRegs.CS = 0xF000; // ensure we start execution on the bios
+  X86_CPU_gRegs.EIP.word = 0; // ensure we start execution on the reset vector
+  X86_CPU_gRegs.CS = 0xFFFF; // ensure we start execution on the reset vector
 
   return 1;
 }
