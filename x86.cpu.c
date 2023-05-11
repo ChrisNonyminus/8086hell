@@ -325,8 +325,6 @@ BOOL X86_JMP_RM16(void) {
   if (X86_CPU_MODRM_GET_MOD(modrm) == 0b01 &&
       X86_CPU_MODRM_GET_REG2(modrm) == 0b011) {
     int8_t disp8 = X86_MEM_Read8(X86_CPU_gRegs.CS_PLUS_IP++);
-    printf("\tBP=%04Xh\n", X86_CPU_gRegs.EBP.word);
-    printf("\tDI=%04Xh\n", X86_CPU_gRegs.EDI.word);
     uint16_t offs = X86_CPU_gRegs.EBP.word + X86_CPU_gRegs.EDI.word + disp8;
     X86_CPU_gRegs.CS_PLUS_IP = X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_MEM_Read16(X86_CPU_SEGOFF(X86_CPU_gRegs.SS, offs)));
     return TRUE;
