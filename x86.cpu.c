@@ -50,6 +50,17 @@ BOOL X86_MOV_BP_IMM16(void) {
   X86_CPU_gRegs.CS_PLUS_IP += 2;
   return X86_MOV_R16_IMM16(&X86_CPU_gRegs.EBP.word, imm);
 }
+BOOL X86_MOV_AX_IMM16(void) {
+  uint16_t imm = X86_MEM_Read16(X86_CPU_gRegs.CS_PLUS_IP);
+  X86_CPU_gRegs.CS_PLUS_IP += 2;
+  return X86_MOV_R16_IMM16(&X86_CPU_gRegs.EAX.word, imm);
+}
+
+BOOL X86_MOV_DX_IMM16(void) {
+  uint16_t imm = X86_MEM_Read16(X86_CPU_gRegs.CS_PLUS_IP);
+  X86_CPU_gRegs.CS_PLUS_IP += 2;
+  return X86_MOV_R16_IMM16(&X86_CPU_gRegs.EDX.word, imm);
+}
 
 BOOL X86_MOV_AH_IMM8(void) {
   return X86_MOV_R8_IMM8(&X86_CPU_gRegs.EAX.h,
@@ -278,7 +289,8 @@ BOOL X86_MOV_SREG_RM16(void) {
         X86_CPU_MODRM_GET_REG2(modrm) == 0b110) {
       src = X86_MEM_Read16(X86_CPU_gRegs.CS_PLUS_IP);
       X86_CPU_gRegs.CS_PLUS_IP += 2;
-      return X86_MOV_R16_IMM16(dst, X86_MEM_Read16(X86_CPU_SEGOFF(X86_CPU_gRegs.DS, src)));
+      return X86_MOV_R16_IMM16(
+          dst, X86_MEM_Read16(X86_CPU_SEGOFF(X86_CPU_gRegs.DS, src)));
     }
   }
   printf("UNHANDLED MODRM: %02Xh\n", (modrm));
@@ -326,7 +338,9 @@ BOOL X86_JMP_RM16(void) {
       X86_CPU_MODRM_GET_REG2(modrm) == 0b011) {
     int8_t disp8 = X86_MEM_Read8(X86_CPU_gRegs.CS_PLUS_IP++);
     uint16_t offs = X86_CPU_gRegs.EBP.word + X86_CPU_gRegs.EDI.word + disp8;
-    X86_CPU_gRegs.CS_PLUS_IP = X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_MEM_Read16(X86_CPU_SEGOFF(X86_CPU_gRegs.SS, offs)));
+    X86_CPU_gRegs.CS_PLUS_IP =
+        X86_CPU_SEGOFF(X86_CPU_gRegs.CS,
+                       X86_MEM_Read16(X86_CPU_SEGOFF(X86_CPU_gRegs.SS, offs)));
     return TRUE;
   }
   printf("Unknown modrm for X86_JMP_RM16: %02Xh!\n", modrm);
@@ -406,6 +420,11 @@ BOOL X86_MOV_RM16_SREG(void) {
   return FALSE;
 }
 
+BOOL X86_OUT_DX_AX(void) {
+    uint16_t io_port = X86_CPU_gRegs.EDX.word;
+    return FALSE; // todo
+}
+
 X86_CPU_InstructionDef X86_CPU_gInstrMap[] = {
     [0x90] = {.disas = "NOP", .execute = X86_NOP},
     [0xEB] = {.disas = "JMP 0x%02X",
@@ -420,6 +439,12 @@ X86_CPU_InstructionDef X86_CPU_gInstrMap[] = {
     [0xB6] = {.disas = "MOV DH, 0x%02X",
 
               .execute = X86_MOV_DH_IMM8},
+    [0xB8] = {.disas = "MOV AX, 0x%04X",
+
+              .execute = X86_MOV_AX_IMM16},
+    [0xBA] = {.disas = "MOV DX, 0x%04X",
+
+              .execute = X86_MOV_DX_IMM16},
     [0xBB] = {.disas = "MOV BX, 0x%04X",
 
               .execute = X86_MOV_BX_IMM16},
@@ -436,6 +461,7 @@ X86_CPU_InstructionDef X86_CPU_gInstrMap[] = {
     [0xA3] = {.disas = "MOV [0x%04X], AX", .execute = X86_MOV_MOFFS16_AX},
     [0xC7] = {.disas = "MOV %s, %s", .execute = X86_MOV_RM16_IMM16},
     [0xEA] = {.disas = "JMP FAR %s:%s", .execute = X86_LONGJUMP_16},
+    [0xEF] = {.disas = "OUT DX, AX", .execute = X86_OUT_DX_AX},
     [0xFF] = {.disas = "JMP FAR %s", .execute = X86_JMP_RM16},
 };
 
