@@ -1,0 +1,4 @@
+*.bin
+*.o
+test186/
+build/
