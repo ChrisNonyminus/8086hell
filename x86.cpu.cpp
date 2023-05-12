@@ -672,6 +672,13 @@ BOOL X86_OUT_IMM8_AL(void) {
   return TRUE;
 }
 
+BOOL X86_IN_AL_IMM8(void) {
+  uint16_t io_port =
+      X86_MEM_Read8(X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word++));
+  X86_CPU_gRegs.EAX.l = X86_EMU_gActiveMachine->IO_Read8(io_port);
+  return TRUE;
+}
+
 BOOL X86_CLI(void) {
   X86_CPU_CLEARFLAGS(X86_CPU_EFLAGS_IF);
 
@@ -1125,6 +1132,7 @@ X86_CPU_InstructionDef X86_CPU_gInstrMap[] = {
     {0xC7, "MOV", X86_MOV_RM16_IMM16, NULL, X86_OP_MODRM | X86_OP_IN_IMM},
     {0xD0, "SAR|SHL|SHR", X86_D0, X86_D0, 0},
     {0xD2, "SAR|SHL|SHR", X86_D2, X86_D2, 0},
+    {0xE4, "IN", X86_IN_AL_IMM8, X86_IN_AL_IMM8, 0},
     {0xE6, "OUT", X86_OUT_IMM8_AL, X86_OUT_IMM8_AL, 0},
     {0xE9, "JMP", X86_JMP_REL16, NULL, X86_OP_IN_IMM},
     {0xEA, "JMP FAR", X86_LONGJUMP_16, NULL, X86_OP_IN_IMM},

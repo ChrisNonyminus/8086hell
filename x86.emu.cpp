@@ -1,4 +1,5 @@
 #include "x86.h"
+#include "devices/kbc.h"
 #include "x86.io.h"
 #include <assert.h>
 #include <cstdlib>
@@ -87,7 +88,7 @@ static void X86_IO_Write16(uint16_t port, uint16_t val) {
   printf("X86_IO_Read8: Unknown IO port %04Xh!\n", port);
 }
 
-static X86_EMU_Machine *Init_80186() {
+static X86_EMU_Machine *Init_80286() {
   X86_EMU_Machine *machine = new X86_EMU_Machine;
 
   //   static X86_IODeviceBase handlers[] = {
@@ -113,8 +114,11 @@ static X86_EMU_Machine *Init_80186() {
                                       X86_IO_F100_Write8,
                                       X86_IO_F100_Read16,
                                       X86_IO_F100_Write16};
+                                      
   machine->io_devices.push_back(testF100);
   machine->io_devices.push_back(X86_GenericCMOS());
+  machine->io_devices.push_back(X86_GenericKeyboardController());
+
   qsort(machine->io_devices.data(), machine->io_devices.size(),
         sizeof(X86_IODeviceBase), X86_IO_HandlerCmp);
   for (auto &dev : machine->io_devices) {
@@ -132,7 +136,7 @@ static X86_EMU_Machine *Init_80186() {
 BOOL X86_EMU_InitMachine(X86_EMU_MachineType type) {
   switch (type) {
   case X86_MACHINE_80286_PCAT:
-    X86_EMU_gActiveMachine = Init_80186();
+    X86_EMU_gActiveMachine = Init_80286();
     break;
   default:
     printf("X86_EMU_InitMachine: Unknown X86 machine type! this shouldn't "
