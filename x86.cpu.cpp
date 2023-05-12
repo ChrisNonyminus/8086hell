@@ -703,10 +703,36 @@ BOOL X86_JNC_REL8(void) {
   return TRUE;
 }
 
+BOOL X86_JBE_REL8(void) {
+  int8_t disp =
+      X86_MEM_Read8(X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word++));
+  if (X86_CPU_ISFLAGSET(X86_CPU_EFLAGS_CF) ||
+      X86_CPU_ISFLAGSET(X86_CPU_EFLAGS_ZF)) {
+    X86_CPU_gRegs.EIP.word = X86_CPU_gRegs.EIP.word + disp;
+  }
+  return TRUE;
+}
+
 BOOL X86_JNZ_REL8(void) {
   int8_t disp =
       X86_MEM_Read8(X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word++));
   if (!X86_CPU_ISFLAGSET(X86_CPU_EFLAGS_ZF)) {
+    X86_CPU_gRegs.EIP.word = X86_CPU_gRegs.EIP.word + disp;
+  }
+  return TRUE;
+}
+BOOL X86_JS_REL8(void) {
+  int8_t disp =
+      X86_MEM_Read8(X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word++));
+  if (X86_CPU_ISFLAGSET(X86_CPU_EFLAGS_SF)) {
+    X86_CPU_gRegs.EIP.word = X86_CPU_gRegs.EIP.word + disp;
+  }
+  return TRUE;
+}
+BOOL X86_JC_REL8(void) {
+  int8_t disp =
+      X86_MEM_Read8(X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word++));
+  if (X86_CPU_ISFLAGSET(X86_CPU_EFLAGS_CF)) {
     X86_CPU_gRegs.EIP.word = X86_CPU_gRegs.EIP.word + disp;
   }
   return TRUE;
@@ -730,6 +756,314 @@ BOOL X86_JNS_REL8(void) {
   return TRUE;
 }
 
+BOOL X86_JNO_REL8(void) {
+  int8_t disp =
+      X86_MEM_Read8(X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word++));
+  if (!X86_CPU_ISFLAGSET(X86_CPU_EFLAGS_OF)) {
+    X86_CPU_gRegs.EIP.word = X86_CPU_gRegs.EIP.word + disp;
+  }
+  return TRUE;
+}
+BOOL X86_JP_REL8(void) {
+  int8_t disp =
+      X86_MEM_Read8(X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word++));
+  if (X86_CPU_ISFLAGSET(X86_CPU_EFLAGS_PF)) {
+    X86_CPU_gRegs.EIP.word = X86_CPU_gRegs.EIP.word + disp;
+  }
+  return TRUE;
+}
+BOOL X86_JZ_REL8(void) {
+  int8_t disp =
+      X86_MEM_Read8(X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word++));
+  if (X86_CPU_ISFLAGSET(X86_CPU_EFLAGS_ZF)) {
+    X86_CPU_gRegs.EIP.word = X86_CPU_gRegs.EIP.word + disp;
+  }
+  return TRUE;
+}
+BOOL X86_JO_REL8(void) {
+  int8_t disp =
+      X86_MEM_Read8(X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word++));
+  if (X86_CPU_ISFLAGSET(X86_CPU_EFLAGS_OF)) {
+    X86_CPU_gRegs.EIP.word = X86_CPU_gRegs.EIP.word + disp;
+  }
+  return TRUE;
+}
+
+BOOL X86_SHR_8(uint8_t *dst, uint8_t src) {
+  X86_CPU_gRegs.EFLAGS.dword =
+      (X86_CPU_gRegs.EFLAGS.dword & ~X86_CPU_EFLAGS_CF) |
+      (((*dst >> (src - 1)) & 1) << 0);
+  int result = *dst >> src;
+
+  if (src == 1) {
+    if ((*dst & (1 << 7)) == (result & (1 << 7))) {
+      X86_CPU_gRegs.EFLAGS.dword &= ~X86_CPU_EFLAGS_OF;
+    } else {
+      X86_CPU_gRegs.EFLAGS.dword |= X86_CPU_EFLAGS_OF;
+    }
+  }
+  int parity = 0;
+  for (int i = 0; i < 8; i++) {
+    if ((result >> i) & 1) {
+      parity++;
+    }
+    if (parity % 2 == 0) {
+      X86_CPU_gRegs.EFLAGS.dword |= X86_CPU_EFLAGS_PF;
+    } else {
+      X86_CPU_gRegs.EFLAGS.dword &= ~X86_CPU_EFLAGS_PF;
+    }
+    if (result & (1 << 7)) {
+      X86_CPU_gRegs.EFLAGS.dword |= X86_CPU_EFLAGS_SF;
+    } else {
+      X86_CPU_gRegs.EFLAGS.dword &= ~X86_CPU_EFLAGS_SF;
+    }
+  }
+  if (result == 0) {
+    X86_CPU_gRegs.EFLAGS.dword |= X86_CPU_EFLAGS_ZF;
+  } else {
+    X86_CPU_gRegs.EFLAGS.dword &= ~X86_CPU_EFLAGS_ZF;
+  }
+  *dst = result;
+
+  return TRUE;
+}
+
+BOOL X86_SHL_8(uint8_t *dst, uint8_t src) {
+  X86_CPU_gRegs.EFLAGS.dword =
+      (X86_CPU_gRegs.EFLAGS.dword & ~X86_CPU_EFLAGS_CF) |
+      (((*dst << (src - 1)) & 1) << 0);
+  int result = *dst << src;
+
+  if (src == 1) {
+    if ((*dst & (1 << 7)) == (result & (1 << 7))) {
+      X86_CPU_gRegs.EFLAGS.dword &= ~X86_CPU_EFLAGS_OF;
+    } else {
+      X86_CPU_gRegs.EFLAGS.dword |= X86_CPU_EFLAGS_OF;
+    }
+  }
+  int parity = 0;
+  for (int i = 0; i < 8; i++) {
+    if ((result >> i) & 1) {
+      parity++;
+    }
+    if (parity % 2 == 0) {
+      X86_CPU_gRegs.EFLAGS.dword |= X86_CPU_EFLAGS_PF;
+    } else {
+      X86_CPU_gRegs.EFLAGS.dword &= ~X86_CPU_EFLAGS_PF;
+    }
+    if (result & (1 << 7)) {
+      X86_CPU_gRegs.EFLAGS.dword |= X86_CPU_EFLAGS_SF;
+    } else {
+      X86_CPU_gRegs.EFLAGS.dword &= ~X86_CPU_EFLAGS_SF;
+    }
+  }
+  if (result == 0) {
+    X86_CPU_gRegs.EFLAGS.dword |= X86_CPU_EFLAGS_ZF;
+  } else {
+    X86_CPU_gRegs.EFLAGS.dword &= ~X86_CPU_EFLAGS_ZF;
+  }
+  *dst = result;
+
+  return TRUE;
+}
+
+BOOL X86_D2(void) {
+  // can be SAL, SHL, or SHR depending on the modrm!
+
+  uint8_t modrm =
+      X86_MEM_Read8(X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word++));
+
+  uint8_t *dst;
+  uint8_t src;
+
+  if ((modrm >> 3) == 0b11101) { // SHR by CL
+    src = X86_CPU_gRegs.ECX.l;
+    switch (X86_CPU_MODRM_GET_REG2(modrm)) {
+    case X86_CPU_W0REG_AL:
+      dst = &X86_CPU_gRegs.EAX.l;
+      break;
+    case X86_CPU_W0REG_AH:
+      dst = &X86_CPU_gRegs.EAX.h;
+      break;
+    case X86_CPU_W0REG_CL:
+      dst = &X86_CPU_gRegs.ECX.l;
+      break;
+    case X86_CPU_W0REG_CH:
+      dst = &X86_CPU_gRegs.ECX.h;
+      break;
+    case X86_CPU_W0REG_DL:
+      dst = &X86_CPU_gRegs.EDX.l;
+      break;
+    case X86_CPU_W0REG_DH:
+      dst = &X86_CPU_gRegs.EDX.h;
+      break;
+    case X86_CPU_W0REG_BL:
+      dst = &X86_CPU_gRegs.EBX.l;
+      break;
+    case X86_CPU_W0REG_BH:
+      dst = &X86_CPU_gRegs.EBX.h;
+      break;
+    default:
+      printf("UNHANDLED REG: %d\n", X86_CPU_MODRM_GET_REG2(modrm));
+      return FALSE;
+    }
+    // if (((*dst >> (src - 1) ) & 1)) {
+    //   // I hope this is right...
+    //   X86_CPU_SETFLAGS(X86_CPU_EFLAGS_CF);
+    // } else {
+    //   X86_CPU_CLEARFLAGS(X86_CPU_EFLAGS_CF);
+    // }
+
+    // according to ax6 my macro usage is bad and I should feel bad
+
+    return X86_SHR_8(dst, src);
+  }
+
+  printf("X86_D2: Unknown modrm: %02X!\n", modrm);
+  return FALSE;
+}
+
+BOOL X86_D0(void) {
+  // can be SAL, SHL, or SHR depending on the modrm!
+
+  uint8_t modrm =
+      X86_MEM_Read8(X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word++));
+
+  uint8_t *dst;
+  uint8_t src;
+
+  if ((modrm >> 3) == 0b11100) { // SHL by 1
+    src = 1;
+    switch (X86_CPU_MODRM_GET_REG2(modrm)) {
+    case X86_CPU_W0REG_AL:
+      dst = &X86_CPU_gRegs.EAX.l;
+      break;
+    case X86_CPU_W0REG_AH:
+      dst = &X86_CPU_gRegs.EAX.h;
+      break;
+    case X86_CPU_W0REG_CL:
+      dst = &X86_CPU_gRegs.ECX.l;
+      break;
+    case X86_CPU_W0REG_CH:
+      dst = &X86_CPU_gRegs.ECX.h;
+      break;
+    case X86_CPU_W0REG_DL:
+      dst = &X86_CPU_gRegs.EDX.l;
+      break;
+    case X86_CPU_W0REG_DH:
+      dst = &X86_CPU_gRegs.EDX.h;
+      break;
+    case X86_CPU_W0REG_BL:
+      dst = &X86_CPU_gRegs.EBX.l;
+      break;
+    case X86_CPU_W0REG_BH:
+      dst = &X86_CPU_gRegs.EBX.h;
+      break;
+    default:
+      printf("UNHANDLED REG: %d\n", X86_CPU_MODRM_GET_REG2(modrm));
+      return FALSE;
+    }
+    return X86_SHL_8(dst, src);
+  }
+
+  printf("X86_D0: Unknown modrm: %02X!\n", modrm);
+  return FALSE;
+}
+
+BOOL X86_ARITHMETIC_U8_FLAGUPDATE(int result, BOOL touch_cf) {
+  int sf = result & (1 << 7) ? X86_CPU_EFLAGS_SF : 0;
+  int zf = result == 0 ? X86_CPU_EFLAGS_ZF : 0;
+  int cf = (result & (1 << 8)) ? (touch_cf ? X86_CPU_EFLAGS_CF : 0) : 0;
+  int parity = 0;
+  for (int i = 0; i < 8; i++) {
+    if (result & (1 << i))
+      parity++;
+  }
+  int pf = (parity % 2 == 0) ? X86_CPU_EFLAGS_PF : 0;
+
+  X86_CPU_SETFLAGS(sf | zf | cf | pf);
+  return TRUE;
+}
+
+BOOL X86_CPU_XOR8(uint8_t *dst, uint8_t src) {
+  X86_CPU_CLEARFLAGS(X86_CPU_EFLAGS_OF | X86_CPU_EFLAGS_CF);
+  int result = *dst ^ src;
+  *dst = result;
+  return X86_ARITHMETIC_U8_FLAGUPDATE(result, FALSE);
+}
+
+BOOL X86_CPU_XOR_R8_RM8(void) {
+
+  uint8_t modrm =
+      X86_MEM_Read8(X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word++));
+  uint8_t *dst;
+  uint8_t src;
+  switch (X86_CPU_MODRM_GET_REG1(modrm)) {
+  case X86_CPU_W0REG_AL:
+    dst = &X86_CPU_gRegs.EAX.l;
+    break;
+  case X86_CPU_W0REG_AH:
+    dst = &X86_CPU_gRegs.EAX.h;
+    break;
+  case X86_CPU_W0REG_CL:
+    dst = &X86_CPU_gRegs.ECX.l;
+    break;
+  case X86_CPU_W0REG_CH:
+    dst = &X86_CPU_gRegs.ECX.h;
+    break;
+  case X86_CPU_W0REG_DL:
+    dst = &X86_CPU_gRegs.EDX.l;
+    break;
+  case X86_CPU_W0REG_DH:
+    dst = &X86_CPU_gRegs.EDX.h;
+    break;
+  case X86_CPU_W0REG_BL:
+    dst = &X86_CPU_gRegs.EBX.l;
+    break;
+  case X86_CPU_W0REG_BH:
+    dst = &X86_CPU_gRegs.EBX.h;
+    break;
+  default:
+    printf("UNHANDLED REG: %d\n", X86_CPU_MODRM_GET_REG1(modrm));
+    return FALSE;
+  }
+  if (X86_CPU_MODRM_GET_MOD(modrm) == 0b11) {
+    switch (X86_CPU_MODRM_GET_REG2(modrm)) {
+    case X86_CPU_W0REG_AL:
+      src = X86_CPU_gRegs.EAX.l;
+      break;
+    case X86_CPU_W0REG_AH:
+      src = X86_CPU_gRegs.EAX.h;
+      break;
+    case X86_CPU_W0REG_CL:
+      src = X86_CPU_gRegs.ECX.l;
+      break;
+    case X86_CPU_W0REG_CH:
+      src = X86_CPU_gRegs.ECX.h;
+      break;
+    case X86_CPU_W0REG_DL:
+      src = X86_CPU_gRegs.EDX.l;
+      break;
+    case X86_CPU_W0REG_DH:
+      src = X86_CPU_gRegs.EDX.h;
+      break;
+    case X86_CPU_W0REG_BL:
+      src = X86_CPU_gRegs.EBX.l;
+      break;
+    case X86_CPU_W0REG_BH:
+      src = X86_CPU_gRegs.EBX.h;
+      break;
+    default:
+      printf("UNHANDLED REG: %d\n", X86_CPU_MODRM_GET_REG2(modrm));
+      return FALSE;
+    }
+
+    return X86_CPU_XOR8(dst, src);
+  }
+  printf("UNHANDLED MODRM: %02Xh\n", (modrm));
+  return FALSE;
+}
+
 int X86_CPU_InstructionCmp(void const *lhs, void const *rhs) {
   X86_CPU_InstructionDef const *const l =
       static_cast<X86_CPU_InstructionDef const *const>(lhs);
@@ -746,9 +1080,17 @@ int X86_CPU_InstructionCmp(void const *lhs, void const *rhs) {
 }
 
 X86_CPU_InstructionDef X86_CPU_gInstrMap[] = {
+    {0x32, "XOR", X86_CPU_XOR_R8_RM8, NULL, 0},
+    {0x70, "JO", X86_JO_REL8, X86_JO_REL8, 0},
+    {0x71, "JNO", X86_JNO_REL8, X86_JNO_REL8, 0},
+    {0x72, "JC", X86_JC_REL8, X86_JC_REL8, 0},
     {0x73, "JNC", X86_JNC_REL8, X86_JNC_REL8, 0},
+    {0x74, "JZ", X86_JZ_REL8, X86_JZ_REL8, 0},
     {0x75, "JNZ", X86_JNZ_REL8, X86_JNZ_REL8, 0},
+    {0x76, "JBE", X86_JBE_REL8, X86_JBE_REL8, 0},
+    {0x78, "JS", X86_JS_REL8, X86_JS_REL8, 0},
     {0x79, "JNS", X86_JNS_REL8, X86_JNS_REL8, 0},
+    {0x7A, "JP", X86_JP_REL8, X86_JP_REL8, 0},
     {0x7B, "JNP", X86_JNP_REL8, X86_JNP_REL8, 0},
     {0x88, "MOV", X86_MOV_R8_RM8_1TO2, NULL, X86_OP_MODRM},
     {0x89, "MOV", X86_MOV_RM16_R16, NULL, X86_OP_MODRM},
@@ -781,6 +1123,8 @@ X86_CPU_InstructionDef X86_CPU_gInstrMap[] = {
     X86_CPU_INSDEF_B8(DI),
     {0xC6, "MOV", X86_MOV_RM8_IMM8, NULL, X86_OP_MODRM | X86_OP_IN_IMM},
     {0xC7, "MOV", X86_MOV_RM16_IMM16, NULL, X86_OP_MODRM | X86_OP_IN_IMM},
+    {0xD0, "SAR|SHL|SHR", X86_D0, X86_D0, 0},
+    {0xD2, "SAR|SHL|SHR", X86_D2, X86_D2, 0},
     {0xE6, "OUT", X86_OUT_IMM8_AL, X86_OUT_IMM8_AL, 0},
     {0xE9, "JMP", X86_JMP_REL16, NULL, X86_OP_IN_IMM},
     {0xEA, "JMP FAR", X86_LONGJUMP_16, NULL, X86_OP_IN_IMM},

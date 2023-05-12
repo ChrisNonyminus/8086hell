@@ -16,7 +16,7 @@ int X86_LLE_BIOS_Load(const char *filename, BOOL even) {
   fseek(biosFile, 0, SEEK_END);
   size_t fsize = ftell(biosFile);
 
-  if ((fsize / 1024) != 64) {
+  if (fsize != 64 * 1024) {
 
     if (fsize == 32 * 1024) {
       rewind(biosFile);
