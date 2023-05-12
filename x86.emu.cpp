@@ -107,7 +107,7 @@ static X86_EMU_Machine *Init_80186() {
 
 BOOL X86_EMU_InitMachine(X86_EMU_MachineType type) {
   switch (type) {
-  case X86_MACHINE_80186:
+  case X86_MACHINE_80286_PCAT:
     X86_EMU_gActiveMachine = Init_80186();
     break;
   default:

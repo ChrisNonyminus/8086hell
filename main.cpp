@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
 //     return 0;
 //   }
 
-  if (!X86_EMU_InitMachine(X86_MACHINE_80186)) {
+  if (!X86_EMU_InitMachine(X86_MACHINE_80286_PCAT)) {
     return 1;
   }
 

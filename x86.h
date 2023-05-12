@@ -3,10 +3,6 @@
 #ifndef __X86_H__
 #define __X86_H__
 
-#ifdef __cplusplus
-#include <cstdint>
-extern "C" {
-#endif
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -120,7 +116,7 @@ typedef struct {
 } X86_CPU_Registers;
 extern X86_CPU_Registers X86_CPU_gRegs;
 
-typedef enum { X86_MACHINE_80186 } X86_EMU_MachineType;
+typedef enum { X86_MACHINE_80286_PCAT } X86_EMU_MachineType;
 typedef struct {
   uint16_t port_start;
   uint16_t port_end;
@@ -176,8 +172,5 @@ void X86_MEM_Write16(uint32_t addr, uint16_t val);
 uint32_t X86_MEM_Read32(uint32_t addr);
 void X86_MEM_Write32(uint32_t addr, uint32_t val);
 
-#ifdef __cplusplus
-}
-#endif
 
 #endif // __X86_H__
