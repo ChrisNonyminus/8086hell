@@ -40,8 +40,8 @@ BOOL X86_JMP_REL8(void) {
 }
 
 BOOL X86_JMP_REL16(void) {
-  uint16_t disp =
-      X86_MEM_Read16(X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word++));
+  uint16_t disp = X86_MEM_Read16(
+      X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word++));
   X86_CPU_gRegs.EIP.word = X86_CPU_gRegs.EIP.word + disp + 1;
   return TRUE;
 }
@@ -406,7 +406,8 @@ BOOL X86_MOV_R16_RM16(void) {
     int8_t disp8 = X86_MEM_Read8(
         X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word++));
     uint16_t offs = X86_CPU_gRegs.EBX.word + X86_CPU_gRegs.ESI.word + disp8;
-    X86_CPU_gRegs.EAX.word = X86_MEM_Read16(X86_CPU_SEGOFF(X86_CPU_gRegs.DS, offs));
+    X86_CPU_gRegs.EAX.word =
+        X86_MEM_Read16(X86_CPU_SEGOFF(X86_CPU_gRegs.DS, offs));
     return TRUE;
   }
   default:
@@ -664,6 +665,13 @@ BOOL X86_OUT_DX_AX(void) {
   return TRUE;
 }
 
+BOOL X86_OUT_IMM8_AL(void) {
+  uint16_t io_port =
+      X86_MEM_Read8(X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word++));
+  X86_EMU_gActiveMachine->IO_Write8(io_port, X86_CPU_gRegs.EAX.l);
+  return TRUE;
+}
+
 BOOL X86_CLI(void) {
   X86_CPU_CLEARFLAGS(X86_CPU_EFLAGS_IF);
 
@@ -717,6 +725,7 @@ X86_CPU_InstructionDef X86_CPU_gInstrMap[] = {
     X86_CPU_INSDEF_B8(DI),
     {0xC6, "MOV", X86_MOV_RM8_IMM8, NULL, X86_OP_MODRM | X86_OP_IN_IMM},
     {0xC7, "MOV", X86_MOV_RM16_IMM16, NULL, X86_OP_MODRM | X86_OP_IN_IMM},
+    {0xE6, "OUT", X86_OUT_IMM8_AL, X86_OUT_IMM8_AL, 0},
     {0xE9, "JMP", X86_JMP_REL16, NULL, X86_OP_IN_IMM},
     {0xEA, "JMP FAR", X86_LONGJUMP_16, NULL, X86_OP_IN_IMM},
     {0xEB, "JMP", X86_JMP_REL8, NULL, X86_OP_IN_IMM},

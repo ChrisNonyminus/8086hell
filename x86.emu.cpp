@@ -3,18 +3,22 @@
 #include <assert.h>
 #include <cstdlib>
 
+#include "devices/cmos.h"
+
 X86_EMU_Machine *X86_EMU_gActiveMachine;
 
 static void Deinit_X86_Common() {
   if (!X86_EMU_gActiveMachine)
     return;
-  delete[] X86_EMU_gActiveMachine->io_handlers;
+  X86_EMU_gActiveMachine->io_devices.clear();
 }
 
 static int X86_IO_HandlerCmp(const void *lhs, const void *rhs) {
 
-  X86_IO_Handler const *const l = static_cast<X86_IO_Handler const *const>(lhs);
-  X86_IO_Handler const *const r = static_cast<X86_IO_Handler const *const>(rhs);
+  X86_IODeviceBase const *const l =
+      static_cast<X86_IODeviceBase const *const>(lhs);
+  X86_IODeviceBase const *const r =
+      static_cast<X86_IODeviceBase const *const>(rhs);
 
   if ((l->port_end < r->port_start) && (l->port_start < r->port_end))
     return -1;
@@ -26,13 +30,13 @@ static int X86_IO_HandlerCmp(const void *lhs, const void *rhs) {
 }
 
 static uint8_t X86_IO_Read8(uint16_t port) {
-  X86_IO_Handler key = {port};
-  const X86_IO_Handler *res = static_cast<const X86_IO_Handler *>(
-      bsearch(&key, X86_EMU_gActiveMachine->io_handlers,
-              X86_EMU_gActiveMachine->num_io_handlers, sizeof(X86_IO_Handler),
-              X86_IO_HandlerCmp));
+  X86_IODeviceBase key = {port, static_cast<uint16_t>(port + 1)};
+  const X86_IODeviceBase *res = static_cast<const X86_IODeviceBase *>(
+      bsearch(&key, X86_EMU_gActiveMachine->io_devices.data(),
+              X86_EMU_gActiveMachine->io_devices.size(),
+              sizeof(X86_IODeviceBase), X86_IO_HandlerCmp));
   if (res) {
-    return res->Read8(NULL); // TODO: pass a real pointer!
+    return res->Read8(const_cast<X86_IODeviceBase *>(res), port);
   }
 
   printf("X86_IO_Read8: Unknown IO port %04Xh!\n", port);
@@ -40,13 +44,13 @@ static uint8_t X86_IO_Read8(uint16_t port) {
 }
 
 static void X86_IO_Write8(uint16_t port, uint8_t val) {
-  X86_IO_Handler key = {port};
-  const X86_IO_Handler *res = static_cast<const X86_IO_Handler *>(
-      bsearch(&key, X86_EMU_gActiveMachine->io_handlers,
-              X86_EMU_gActiveMachine->num_io_handlers, sizeof(X86_IO_Handler),
-              X86_IO_HandlerCmp));
+  X86_IODeviceBase key = {port, static_cast<uint16_t>(port + 1)};
+  const X86_IODeviceBase *res = static_cast<const X86_IODeviceBase *>(
+      bsearch(&key, X86_EMU_gActiveMachine->io_devices.data(),
+              X86_EMU_gActiveMachine->io_devices.size(),
+              sizeof(X86_IODeviceBase), X86_IO_HandlerCmp));
   if (res) {
-    res->Write8(NULL, val);
+    res->Write8(const_cast<X86_IODeviceBase *>(res), port, val);
     return;
   }
 
@@ -55,13 +59,13 @@ static void X86_IO_Write8(uint16_t port, uint8_t val) {
 
 static uint16_t X86_IO_Read16(uint16_t port) {
   assert((port % 2) == 0);
-  X86_IO_Handler key = {port};
-  const X86_IO_Handler *res = static_cast<const X86_IO_Handler *>(
-      bsearch(&key, X86_EMU_gActiveMachine->io_handlers,
-              X86_EMU_gActiveMachine->num_io_handlers, sizeof(X86_IO_Handler),
-              X86_IO_HandlerCmp));
+  X86_IODeviceBase key = {port, static_cast<uint16_t>(port + 2)};
+  const X86_IODeviceBase *res = static_cast<const X86_IODeviceBase *>(
+      bsearch(&key, X86_EMU_gActiveMachine->io_devices.data(),
+              X86_EMU_gActiveMachine->io_devices.size(),
+              sizeof(X86_IODeviceBase), X86_IO_HandlerCmp));
   if (res) {
-    return res->Read16(NULL);
+    return res->Read16(const_cast<X86_IODeviceBase *>(res), port);
   }
 
   printf("X86_IO_Read8: Unknown IO port %04Xh!\n", port);
@@ -70,13 +74,13 @@ static uint16_t X86_IO_Read16(uint16_t port) {
 
 static void X86_IO_Write16(uint16_t port, uint16_t val) {
   assert((port % 2) == 0);
-  X86_IO_Handler key = {port};
-  const X86_IO_Handler *res = static_cast<const X86_IO_Handler *>(
-      bsearch(&key, X86_EMU_gActiveMachine->io_handlers,
-              X86_EMU_gActiveMachine->num_io_handlers, sizeof(X86_IO_Handler),
-              X86_IO_HandlerCmp));
+  X86_IODeviceBase key = {port, static_cast<uint16_t>(port + 2)};
+  const X86_IODeviceBase *res = static_cast<const X86_IODeviceBase *>(
+      bsearch(&key, X86_EMU_gActiveMachine->io_devices.data(),
+              X86_EMU_gActiveMachine->io_devices.size(),
+              sizeof(X86_IODeviceBase), X86_IO_HandlerCmp));
   if (res) {
-    res->Write16(NULL, val);
+    res->Write16(const_cast<X86_IODeviceBase *>(res), port, val);
     return;
   }
 
@@ -86,16 +90,36 @@ static void X86_IO_Write16(uint16_t port, uint16_t val) {
 static X86_EMU_Machine *Init_80186() {
   X86_EMU_Machine *machine = new X86_EMU_Machine;
 
-  static X86_IO_Handler handlers[] = {
-      {0xF100, 0xF102, X86_IO_F100_Read8, X86_IO_F100_Write8, X86_IO_F100_Read16,
-       X86_IO_F100_Write16},
-  };
+  //   static X86_IODeviceBase handlers[] = {
+  //       {0xF100, 0xF102, "F100", 0, NULL, X86_IO_F100_Read8,
+  //       X86_IO_F100_Write8,
+  //        X86_IO_F100_Read16, X86_IO_F100_Write16},
+  //   };
 
-  qsort(handlers, sizeof(handlers) / sizeof(handlers[0]),
-        sizeof(X86_IO_Handler), X86_IO_HandlerCmp);
+  //   qsort(handlers, sizeof(handlers) / sizeof(handlers[0]),
+  //         sizeof(X86_IODeviceBase), X86_IO_HandlerCmp);
+  //   for (int i = 0; i < sizeof(handlers) / sizeof(handlers[0]); i++) {
+  //     handlers[i].parent = machine;
+  //   }
 
-  machine->io_handlers = handlers;
-  machine->num_io_handlers = sizeof(handlers) / sizeof(handlers[0]);
+  //   machine->io_handlers = handlers;
+  //   machine->num_io_handlers = sizeof(handlers) / sizeof(handlers[0]);
+  static X86_IODeviceBase testF100 = {0xF100,
+                                      0xF102,
+                                      "F100",
+                                      0,
+                                      NULL,
+                                      X86_IO_F100_Read8,
+                                      X86_IO_F100_Write8,
+                                      X86_IO_F100_Read16,
+                                      X86_IO_F100_Write16};
+  machine->io_devices.push_back(testF100);
+  machine->io_devices.push_back(X86_GenericCMOS());
+  qsort(machine->io_devices.data(), machine->io_devices.size(),
+        sizeof(X86_IODeviceBase), X86_IO_HandlerCmp);
+  for (auto &dev : machine->io_devices) {
+    dev.parent = machine;
+  }
 
   machine->Deinit = Deinit_X86_Common;
   machine->IO_Read8 = X86_IO_Read8;

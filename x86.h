@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <vector>
 
 typedef int BOOL;
 #define TRUE 1
@@ -115,27 +116,35 @@ typedef struct {
   uint32_t EFLAGS;
 } X86_CPU_Registers;
 extern X86_CPU_Registers X86_CPU_gRegs;
+struct X86_EMU_Machine;
+struct X86_IODeviceBase {
+    uint16_t port_start;
+    uint16_t port_end;
+
+    const char* name;
+    int irq;
+
+    X86_EMU_Machine* parent;
+
+    uint8_t (*Read8)(void *device, uint16_t port);
+    void (*Write8)(void *device, uint16_t port, uint8_t val);
+    uint16_t (*Read16)(void *device, uint16_t port);
+    void (*Write16)(void *device, uint16_t port, uint16_t val);
+
+    
+};
 
 typedef enum { X86_MACHINE_80286_PCAT } X86_EMU_MachineType;
-typedef struct {
-  uint16_t port_start;
-  uint16_t port_end;
-  uint8_t (*Read8)(void *device);
-  void (*Write8)(void *device, uint8_t val);
-  uint16_t (*Read16)(void *device);
-  void (*Write16)(void *device, uint16_t val);
-} X86_IO_Handler;
-typedef struct {
+
+struct X86_EMU_Machine {
   X86_EMU_MachineType type;
-  X86_IO_Handler *io_handlers;
-  size_t num_io_handlers;
+  std::vector<X86_IODeviceBase> io_devices;
   void (*Deinit)(void);
   uint8_t (*IO_Read8)(uint16_t port);
   void (*IO_Write8)(uint16_t port, uint8_t val);
   uint16_t (*IO_Read16)(uint16_t port);
   void (*IO_Write16)(uint16_t port, uint16_t val);
-} X86_EMU_Machine;
-extern X86_EMU_Machine *X86_EMU_gActiveMachine;
+} extern *X86_EMU_gActiveMachine;
 
 BOOL X86_EMU_InitMachine(X86_EMU_MachineType type);
 BOOL X86_EMU_FreeMachine(void);
