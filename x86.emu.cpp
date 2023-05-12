@@ -114,8 +114,11 @@ static X86_EMU_Machine *Init_80286() {
                                       X86_IO_F100_Write8,
                                       X86_IO_F100_Read16,
                                       X86_IO_F100_Write16};
-                                      
+
   machine->io_devices.push_back(testF100);
+  machine->io_devices.push_back({0x80, 0x81, "Manufacturing Diagnostics port",
+                                 0, NULL, X86_IO_80_Read8, X86_IO_80_Write8,
+                                 X86_IO_80_Read16, X86_IO_80_Write16});
   machine->io_devices.push_back(X86_GenericCMOS());
   machine->io_devices.push_back(X86_GenericKeyboardController());
 
