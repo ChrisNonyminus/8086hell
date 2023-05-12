@@ -33,7 +33,7 @@ BOOL X86_HLT() {
 }
 
 BOOL X86_JMP_REL8(void) {
-  uint8_t disp =
+  int8_t disp =
       X86_MEM_Read8(X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word++));
   X86_CPU_gRegs.EIP.word = X86_CPU_gRegs.EIP.word + disp;
   return TRUE;
@@ -680,6 +680,56 @@ BOOL X86_CLI(void) {
   return TRUE;
 }
 
+BOOL X86_SAHF(void) {
+  X86_CPU_gRegs.EFLAGS.l =
+      X86_CPU_gRegs.EAX
+          .h; // TODO: copy each used bitflag instead of copying the whole byte
+  return TRUE;
+}
+
+BOOL X86_LAHF(void) {
+  X86_CPU_gRegs.EAX.h =
+      X86_CPU_gRegs.EFLAGS
+          .l; // TODO: copy each used bitflag instead of copying the whole byte
+  return TRUE;
+}
+
+BOOL X86_JNC_REL8(void) {
+  int8_t disp =
+      X86_MEM_Read8(X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word++));
+  if (!X86_CPU_ISFLAGSET(X86_CPU_EFLAGS_CF)) {
+    X86_CPU_gRegs.EIP.word = X86_CPU_gRegs.EIP.word + disp;
+  }
+  return TRUE;
+}
+
+BOOL X86_JNZ_REL8(void) {
+  int8_t disp =
+      X86_MEM_Read8(X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word++));
+  if (!X86_CPU_ISFLAGSET(X86_CPU_EFLAGS_ZF)) {
+    X86_CPU_gRegs.EIP.word = X86_CPU_gRegs.EIP.word + disp;
+  }
+  return TRUE;
+}
+
+BOOL X86_JNP_REL8(void) {
+  int8_t disp =
+      X86_MEM_Read8(X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word++));
+  if (!X86_CPU_ISFLAGSET(X86_CPU_EFLAGS_PF)) {
+    X86_CPU_gRegs.EIP.word = X86_CPU_gRegs.EIP.word + disp;
+  }
+  return TRUE;
+}
+
+BOOL X86_JNS_REL8(void) {
+  int8_t disp =
+      X86_MEM_Read8(X86_CPU_SEGOFF(X86_CPU_gRegs.CS, X86_CPU_gRegs.EIP.word++));
+  if (!X86_CPU_ISFLAGSET(X86_CPU_EFLAGS_SF)) {
+    X86_CPU_gRegs.EIP.word = X86_CPU_gRegs.EIP.word + disp;
+  }
+  return TRUE;
+}
+
 int X86_CPU_InstructionCmp(void const *lhs, void const *rhs) {
   X86_CPU_InstructionDef const *const l =
       static_cast<X86_CPU_InstructionDef const *const>(lhs);
@@ -696,6 +746,10 @@ int X86_CPU_InstructionCmp(void const *lhs, void const *rhs) {
 }
 
 X86_CPU_InstructionDef X86_CPU_gInstrMap[] = {
+    {0x73, "JNC", X86_JNC_REL8, X86_JNC_REL8, 0},
+    {0x75, "JNZ", X86_JNZ_REL8, X86_JNZ_REL8, 0},
+    {0x79, "JNS", X86_JNS_REL8, X86_JNS_REL8, 0},
+    {0x7B, "JNP", X86_JNP_REL8, X86_JNP_REL8, 0},
     {0x88, "MOV", X86_MOV_R8_RM8_1TO2, NULL, X86_OP_MODRM},
     {0x89, "MOV", X86_MOV_RM16_R16, NULL, X86_OP_MODRM},
     {0x8A, "MOV", X86_MOV_R8_RM8, NULL, X86_OP_MODRM},
@@ -703,6 +757,8 @@ X86_CPU_InstructionDef X86_CPU_gInstrMap[] = {
     {0x8C, "MOV", X86_MOV_RM16_SREG, NULL, X86_OP_MODRM},
     {0x8E, "MOV", X86_MOV_SREG_RM16, NULL, X86_OP_MODRM},
     {0x90, "NOP", X86_NOP, X86_NOP, 0},
+    {0x9E, "SAHF", X86_SAHF, X86_SAHF, 0},
+    {0x9F, "LAHF", X86_LAHF, X86_LAHF, 0},
 
     {0xA1, "MOV", X86_MOV_AX_MOFFS16, NULL, X86_OP_IN_MEM | X86_OP_OUT_REG},
     {0xA3, "MOV", X86_MOV_MOFFS16_AX, NULL, X86_OP_OUT_MEM | X86_OP_IN_REG},
@@ -749,6 +805,7 @@ void X86_CPU_PrintRegisters() {
   printf("\tCS: %08Xh\n", X86_CPU_gRegs.CS);
   printf("\tDS: %08Xh\n", X86_CPU_gRegs.DS);
   printf("\tSS: %08Xh\n", X86_CPU_gRegs.SS);
+  printf("\tEFLAGS: %08Xh\n", X86_CPU_gRegs.EFLAGS.dword);
 }
 
 X86_CPU_Registers X86_CPU_gRegs = {};
